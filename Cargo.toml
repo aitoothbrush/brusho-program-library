@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "programs/*"
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
+
+[workspace.dependencies]
+anchor-lang = { version = "0.29.0", features = ["init-if-needed"] }
+anchor-spl = { version = "0.29.0", features = ["mint", "token"] }
+mpl-token-metadata = { version = "3.2.0" }
+account-compression-cpi = { rev = "a2d12e4a157d91feb73aa40a97fe297fd477dd87", git = "https://github.com/helium/account-compression-anchor-gen.git", features = ["cpi"]}
+bubblegum-cpi = { rev = "a2d12e4a157d91feb73aa40a97fe297fd477dd87", git = "https://github.com/helium/account-compression-anchor-gen.git", features = ["cpi"]}
+solana-security-txt = "1.1.1"
+default-env = "0.1.1"
