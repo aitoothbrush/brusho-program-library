@@ -13,7 +13,7 @@ pub struct Voter {
     voter_weight_record_bump: u8,
     reserved: [u8; 94],
 }
-const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + 10 * 72 + 2 + 94);
+const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + 10 * 56 + 2 + 94);
 const_assert!(std::mem::size_of::<Voter>() % 8 == 0);
 
 /// impl: factory function and getters

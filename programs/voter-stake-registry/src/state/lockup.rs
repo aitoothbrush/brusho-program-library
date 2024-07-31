@@ -33,11 +33,8 @@ pub struct Lockup {
     /// Similarly vote power computations don't care about start_ts and always
     /// assume the full interval from now to end_ts.
     start_ts: i64,
-
-    // Empty bytes for future upgrades.
-    reserved: [u8; 16],
 }
-const_assert!(std::mem::size_of::<Lockup>() == 8 + 8 + 16);
+const_assert!(std::mem::size_of::<Lockup>() == 8 + 8);
 const_assert!(std::mem::size_of::<Lockup>() % 8 == 0);
 
 /// impl: factory function and getters
@@ -57,7 +54,6 @@ impl Lockup {
         Ok(Self {
             kind,
             start_ts,
-            reserved: [0; 16],
         })
     }
 
@@ -164,7 +160,6 @@ impl Default for Lockup {
                 unit: LockupTimeUnit::Day,
             }),
             start_ts: 0,
-            reserved: [0; 16],
         }
     }
 }
@@ -619,7 +614,6 @@ mod tests {
         let l = Lockup {
             kind: LockupKind::Daily(t.days_total),
             start_ts,
-            reserved: [0u8; 16],
         };
         let days_left = l.periods_left(curr_ts)?;
         assert_eq!(days_left, t.expected_days_left);
@@ -632,7 +626,6 @@ mod tests {
         let l = Lockup {
             kind: LockupKind::Monthly(t.months_total),
             start_ts,
-            reserved: [0u8; 16],
         };
         let months_left = l.periods_left(curr_ts)?;
         assert_eq!(months_left, t.expected_months_left);

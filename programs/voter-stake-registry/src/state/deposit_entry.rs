@@ -34,7 +34,7 @@ pub struct DepositEntry {
 
     reserved: [u8; 23],
 }
-const_assert!(std::mem::size_of::<DepositEntry>() == 32 + 2 * 8 + 1 + 23);
+const_assert!(std::mem::size_of::<DepositEntry>() == 16 + 2 * 8 + 1 + 23);
 const_assert!(std::mem::size_of::<DepositEntry>() % 8 == 0);
 
 /// impl: factory function and getters
