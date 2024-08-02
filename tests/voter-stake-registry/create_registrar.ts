@@ -13,6 +13,7 @@ async function createRegistrar(
   payer: web3.Keypair,
   votingConfig?: VotingConfig,
   depositConfig?: DepositConfig,
+  circuit_breaker_threshold?: anchor.BN,
 ) {
   if (votingConfig == undefined) {
     votingConfig = defaultVotingConfig();
@@ -25,7 +26,8 @@ async function createRegistrar(
   await VSR_PROGRAM.methods.createRegistrar(
     bump,
     votingConfig,
-    depositConfig
+    depositConfig,
+    circuit_breaker_threshold
   ).accounts({
     registrar,
     realm: realm,

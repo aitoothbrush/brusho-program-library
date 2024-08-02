@@ -1,3 +1,4 @@
+pub use claim_reward::*;
 pub use close_voter::*;
 pub use create_registrar::*;
 pub use create_voter::*;
@@ -12,6 +13,7 @@ pub use update_voter_weight_record::*;
 pub use update_voting_config::*;
 pub use withdraw::*;
 
+mod claim_reward;
 mod close_voter;
 mod create_registrar;
 mod create_voter;

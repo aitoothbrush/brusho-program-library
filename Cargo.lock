@@ -896,6 +896,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "circuit-breaker"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+]
+
+[[package]]
 name = "clap"
 version = "2.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5513,6 +5521,7 @@ dependencies = [
  "base64 0.13.1",
  "bincode",
  "bytemuck",
+ "circuit-breaker",
  "default-env",
  "env_logger",
  "itertools",

@@ -8,6 +8,7 @@ use std::mem::size_of;
 
 #[derive(Accounts)]
 pub struct CreateVoter<'info> {
+    #[account(mut)]
     pub registrar: Box<Account<'info, Registrar>>,
     pub governing_token_mint: Box<Account<'info, Mint>>,
 
@@ -64,16 +65,23 @@ pub fn create_voter(
     voter_weight_record_bump: u8,
 ) -> Result<()> {
     require_eq!(voter_bump, ctx.bumps.voter);
-    require_eq!(
-        voter_weight_record_bump,
-        ctx.bumps.voter_weight_record
-    );
+    require_eq!(voter_weight_record_bump, ctx.bumps.voter_weight_record);
 
-    let registrar = &ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar;
     let voter_authority = ctx.accounts.voter_authority.key();
 
+    // accure rewards
+    let curr_ts = registrar.clock_unix_timestamp();
+    registrar.accure_rewards(curr_ts);
+
     let voter = &mut ctx.accounts.voter;
-    voter.set_inner(Voter::new(voter_authority, registrar.key(), voter_bump, voter_weight_record_bump));
+    voter.set_inner(Voter::new(
+        voter_authority,
+        registrar.key(),
+        registrar.reward_index,
+        voter_bump,
+        voter_weight_record_bump,
+    ));
 
     let voter_weight_record = &mut ctx.accounts.voter_weight_record;
     voter_weight_record.account_discriminator =

@@ -7,6 +7,7 @@ pub const NODE_DEPOSIT_ENTRY_INDEX: u8 = 0;
 
 #[derive(Accounts)]
 pub struct NodeDeposit<'info> {
+    #[account(mut)]
     pub registrar: Box<Account<'info, Registrar>>,
 
     // checking the PDA address it just an extra precaution,
@@ -53,28 +54,37 @@ impl<'info> NodeDeposit<'info> {
 ///
 /// Tokens will be transfered from deposit_token to vault using the deposit_authority.
 pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
-    let registrar = &ctx.accounts.registrar;
-    let node_security_deposit = registrar.deposit_config.node_security_deposit;
+    {
+        let registrar = &ctx.accounts.registrar;
+        let node_security_deposit = registrar.deposit_config.node_security_deposit;
 
-    // Deposit tokens into the vault
-    token::transfer(ctx.accounts.transfer_ctx(), node_security_deposit)?;
+        // Deposit tokens into the vault
+        token::transfer(ctx.accounts.transfer_ctx(), node_security_deposit)?;
+    }
 
+    let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
     require!(
         !(voter.is_active(NODE_DEPOSIT_ENTRY_INDEX)?),
         VsrError::DuplicateNodeDeposit
     );
 
+    // accure rewards
     let curr_ts = registrar.clock_unix_timestamp();
+    registrar.accure_rewards(curr_ts);
+
+    let node_security_deposit = registrar.deposit_config.node_security_deposit;
     voter.activate(
         NODE_DEPOSIT_ENTRY_INDEX,
+        curr_ts,
         Lockup::new_from_kind(
             LockupKind::Constant(registrar.deposit_config.node_deposit_lockup_duration),
             curr_ts,
             curr_ts,
         )?,
+        registrar
     )?;
-    voter.deposit(NODE_DEPOSIT_ENTRY_INDEX, node_security_deposit, registrar)?;
+    voter.deposit(NODE_DEPOSIT_ENTRY_INDEX, curr_ts, node_security_deposit, registrar)?;
 
     msg!(
         "node_deposit: amount {}, lockup kind {:?}",
@@ -87,4 +97,3 @@ pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
 
     Ok(())
 }
-

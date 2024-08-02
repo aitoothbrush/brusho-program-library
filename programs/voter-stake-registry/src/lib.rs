@@ -67,8 +67,9 @@ pub mod voter_stake_registry {
         registrar_bump: u8,
         voting_config: VotingConfig,
         deposit_config: DepositConfig,
+        circuit_breaker_threshold: u64,
     ) -> Result<()> {
-        instructions::create_registrar(ctx, registrar_bump, voting_config, deposit_config)
+        instructions::create_registrar(ctx, registrar_bump, voting_config, deposit_config, circuit_breaker_threshold)
     }
 
     pub fn create_voter(
@@ -139,5 +140,9 @@ pub mod voter_stake_registry {
 
     pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
         instructions::withdraw(ctx, deposit_entry_index, amount)
+    }
+
+    pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
+        instructions::claim_reward(ctx)
     }
 }

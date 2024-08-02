@@ -38,6 +38,7 @@ pub fn close_voter<'info>(ctx: Context<'_, '_, 'info, 'info, CloseVoter<'info>>)
         let voter = &ctx.accounts.voter;
         let amount = voter.amount_deposited_native();
         require_eq!(amount, 0, VsrError::VotingTokenNonZero);
+        require_eq!(voter.get_reward_claimable_amount(), 0, VsrError::VotingTokenNonZero);
 
         // let voter_seeds = voter_seeds!(voter);
         // let voter_seeds =

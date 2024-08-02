@@ -4,6 +4,7 @@ use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct OrdinaryDeposit<'info> {
+    #[account(mut)]
     pub registrar: Box<Account<'info, Registrar>>,
 
     // checking the PDA address it just an extra precaution,
@@ -68,7 +69,7 @@ pub fn ordinary_deposit(
     // Deposit tokens into the vault
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;
 
-    let registrar = &ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
     require_gte!(
         duraiton.seconds(),
@@ -81,6 +82,9 @@ pub fn ordinary_deposit(
 
     let curr_ts = registrar.clock_unix_timestamp();
     let lockup = Lockup::new_from_kind(LockupKind::Constant(duraiton), curr_ts, curr_ts)?;
+
+    // accure rewards
+    registrar.accure_rewards(curr_ts);
 
     let mut amount_to_deposit: u64 = amount;
     if voter.is_active(deposit_entry_index)? {
@@ -98,17 +102,17 @@ pub fn ordinary_deposit(
                     .checked_add(amount)
                     .unwrap();
 
-                voter.deactivate(deposit_entry_index)?;
-                voter.activate(deposit_entry_index, lockup)?;
+                voter.deactivate(deposit_entry_index, curr_ts, registrar)?;
+                voter.activate(deposit_entry_index, curr_ts, lockup, registrar)?;
             }
         } else {
             return Err(error!(VsrError::InternalProgramError));
         }
     } else {
-        voter.activate(deposit_entry_index, lockup)?;
+        voter.activate(deposit_entry_index, curr_ts, lockup, registrar)?;
     }
 
-    voter.deposit(deposit_entry_index, amount_to_deposit, registrar)?;
+    voter.deposit(deposit_entry_index, curr_ts, amount_to_deposit, registrar)?;
 
     msg!(
         "ordinary_deposit: amount {}, lockup kind {:?}",

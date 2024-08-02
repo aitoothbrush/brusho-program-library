@@ -94,18 +94,25 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     }
 
     // Load the accounts.
-    let registrar = &ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
 
     // Governance may forbid withdraws, for example when engaged in a vote.
-    let token_owner_record = load_token_owner_record(
-        &ctx.accounts.token_owner_record.to_account_info(),
-        &voter,
-        registrar,
-    )?;
-    token_owner_record.assert_can_withdraw_governing_tokens()?;
+    if *ctx.accounts.token_owner_record.owner == registrar.governance_program_id {
+        // Governance may forbid withdraws, for example when engaged in a vote.
+        let token_owner_record = load_token_owner_record(
+            &ctx.accounts.token_owner_record.to_account_info(),
+            &voter,
+            registrar,
+        )?;
+        token_owner_record.assert_can_withdraw_governing_tokens()?;
+    }
 
-    voter.withdraw(deposit_entry_index, amount, registrar)?;
+    let curr_ts = registrar.clock_unix_timestamp();
+    // accure rewards
+    registrar.accure_rewards(curr_ts);
+
+    voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
 
     msg!(
         "Withdraw: amount {}, deposit index {}",
@@ -115,7 +122,7 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
 
     // Update the voter weight record
     let record = &mut ctx.accounts.voter_weight_record;
-    record.voter_weight = voter.weight(registrar)?;
+    record.voter_weight = voter.weight(curr_ts, registrar)?;
     record.voter_weight_expiry = Some(Clock::get()?.slot);
 
     Ok(())
