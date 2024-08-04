@@ -1,4 +1,4 @@
-use crate::{error::VsrError, state::*};
+use crate::{error::VsrError, events::NodeDepositEvent, state::*};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
 
@@ -86,14 +86,11 @@ pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
     )?;
     voter.deposit(NODE_DEPOSIT_ENTRY_INDEX, curr_ts, node_security_deposit, registrar)?;
 
-    msg!(
-        "node_deposit: amount {}, lockup kind {:?}",
-        node_security_deposit,
-        voter
-            .deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?
-            .get_lockup()
-            .kind(),
-    );
+    emit!(NodeDepositEvent {
+        voter: voter.get_voter_authority(),
+        amount: node_security_deposit,
+        lockup: voter.deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?.get_lockup()
+    });
 
     Ok(())
 }

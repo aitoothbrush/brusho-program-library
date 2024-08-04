@@ -69,7 +69,7 @@ impl Registrar {
 
     pub fn max_vote_weight(&self, mint: &Account<Mint>) -> Result<u64> {
         if mint.key() != self.governing_token_mint {
-            return Err(error!(VsrError::InvalidVotingMint));
+            return Err(error!(VsrError::InvalidGoverningMint));
         }
 
         let mut sum = self.voting_config.baseline_vote_weight(mint.supply)?;

@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::OrdinaryReleaseDepositEvent;
 use crate::state::*;
 use crate::NODE_DEPOSIT_ENTRY_INDEX;
 use anchor_lang::prelude::*;
@@ -73,6 +74,13 @@ pub fn ordinary_release_deposit(
 
         voter.activate(target_deposit_entry_index, curr_ts, target_lockup, registrar)?;
         voter.deposit(target_deposit_entry_index, curr_ts, amount, registrar)?;
+
+        emit!(OrdinaryReleaseDepositEvent {
+            voter: voter.get_voter_authority(),
+            deposit_entry_index,
+            target_deposit_entry_index,
+            amount,
+        });
 
         Ok(())
     } else {

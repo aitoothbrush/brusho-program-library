@@ -328,5 +328,21 @@ describe("ordinary_deposit!", () => {
     assert.equal(depositEntry.lockup.kind.constant![0].periods, 6) // assert periods of lockup time duration is 6
     assert.isTrue((depositEntry.lockup.kind.constant![0].unit as any).month != undefined) // assert unit of lockup time duration is Month
     assert.isTrue(newlockupStartTs.gte(lockupStartTs)) // The start ts of lockup moves
+
+    await assertThrowsAnchorError('CanNotShortenLockupDuration', async () => {
+      await VSR_PROGRAM.methods
+        .ordinaryDeposit(depositEntryIndex, new anchor.BN(1e9), lockupDayily(16)) // shorten lockup periods 
+        .accounts({
+          registrar,
+          voter,
+          vault,
+          depositToken: voterTokenAccount,
+          depositAuthority: voterAuthority.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID
+        }).signers([voterAuthority])
+        .rpc();
+    },
+      (anchorErr) => { },
+      false);
   });
 });

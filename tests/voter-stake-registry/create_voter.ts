@@ -31,7 +31,7 @@ async function createVoter(
     tokenProgram: TOKEN_PROGRAM_ID,
     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
   }).signers([voterAuthority, payer])
-    .rpc()
+    .rpc({ commitment: "confirmed" })
 }
 
 describe("create_voter!", () => {
@@ -156,7 +156,7 @@ describe("create_voter!", () => {
 
     // verify registrar data
     let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
-    const tx = await CONNECTION.getTransaction(txId, {commitment: 'confirmed'});
+    const tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' });
     const txTime = registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString()));
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
 

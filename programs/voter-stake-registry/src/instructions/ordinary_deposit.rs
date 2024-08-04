@@ -1,4 +1,4 @@
-use crate::{error::VsrError, state::*, NODE_DEPOSIT_ENTRY_INDEX};
+use crate::{error::VsrError, events::OrdinaryDepositEvent, state::*, NODE_DEPOSIT_ENTRY_INDEX};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
 
@@ -96,6 +96,10 @@ pub fn ordinary_deposit(
                 VsrError::InternalProgramError
             );
 
+            if old_duration.seconds() > duraiton.seconds() {
+                return Err(error!(VsrError::CanNotShortenLockupDuration));
+            }
+
             if old_duration != duraiton {
                 amount_to_deposit = d_entry
                     .get_amount_deposited_native()
@@ -114,14 +118,12 @@ pub fn ordinary_deposit(
 
     voter.deposit(deposit_entry_index, curr_ts, amount_to_deposit, registrar)?;
 
-    msg!(
-        "ordinary_deposit: amount {}, lockup kind {:?}",
-        amount,
-        voter
-            .deposit_entry_at(deposit_entry_index)?
-            .get_lockup()
-            .kind(),
-    );
+    emit!(OrdinaryDepositEvent {
+        voter: voter.get_voter_authority(),
+        deposit_entry_index,
+        amount: amount,
+        lockup: voter.deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?.get_lockup()
+    });
 
     Ok(())
 }

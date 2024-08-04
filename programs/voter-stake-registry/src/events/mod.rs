@@ -1,43 +1,36 @@
 use anchor_lang::prelude::*;
 
+use crate::Lockup;
+
 #[event]
 #[derive(Debug)]
-pub struct VoterInfo {
-    /// Voter's total voting power
-    pub voting_power: u64,
-    /// Voter's total voting power, when ignoring any effects from lockup
-    pub voting_power_baseline: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct VestingInfo {
-    /// Amount of tokens vested each period
-    pub rate: u64,
-    /// Time of the next upcoming vesting
-    pub next_timestamp: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct LockingInfo {
-    /// Amount of locked tokens
+pub struct NodeDepositEvent {
+    pub voter: Pubkey,
     pub amount: u64,
-    /// Time at which the lockup fully ends (None for Constant lockup)
-    pub end_timestamp: Option<u64>,
-    /// Information about vesting, if any
-    pub vesting: Option<VestingInfo>,
+    pub lockup: Lockup, 
 }
 
 #[event]
 #[derive(Debug)]
-pub struct DepositEntryInfo {
+pub struct NodeReleaseDepositEvent {
+    pub voter: Pubkey,
+    pub target_deposit_entry_index: u8,
+}
+
+#[event]
+#[derive(Debug)]
+pub struct OrdinaryDepositEvent {
+    pub voter: Pubkey,
     pub deposit_entry_index: u8,
-    pub voting_mint_config_index: u8,
-    /// Amount that is unlocked
-    pub unlocked: u64,
-    /// Voting power implied by this deposit entry
-    pub voting_power: u64,
-    /// Voting power without any adjustments for lockup
-    pub voting_power_baseline: u64,
-    /// Information about locking, if any
-    pub locking: Option<LockingInfo>,
+    pub amount: u64,
+    pub lockup: Lockup, 
+}
+
+#[event]
+#[derive(Debug)]
+pub struct OrdinaryReleaseDepositEvent {
+    pub voter: Pubkey,
+    pub deposit_entry_index: u8,
+    pub target_deposit_entry_index: u8,
+    pub amount: u64,
 }

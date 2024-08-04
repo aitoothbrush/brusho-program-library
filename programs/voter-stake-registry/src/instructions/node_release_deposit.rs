@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::NodeReleaseDepositEvent;
 use crate::state::*;
 use crate::NODE_DEPOSIT_ENTRY_INDEX;
 use anchor_lang::prelude::*;
@@ -62,6 +63,11 @@ pub fn node_release_deposit(
             node_security_deposit,
             registrar,
         )?;
+
+        emit!(NodeReleaseDepositEvent {
+            voter: voter.get_voter_authority(),
+            target_deposit_entry_index,
+        });
 
         Ok(())
     } else {
