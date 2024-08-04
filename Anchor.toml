@@ -6,10 +6,12 @@ skip-lint = false
 
 [programs.localnet]
 voter_stake_registry = "Bvsr2wYoKA1btgu3DGUFZ4KKtdwWMAQA5vvd4FKRPi8T"
+circuit-breaker = "CirC9HGGQgTk8XA8ARBgXkaBDDt3Jejs3F8ezTNKp8Q"
 
 [workspace]
 members = [
   "programs/voter-stake-registry",
+  "programs/circuit-breaker",
 ]
 
 [registry]

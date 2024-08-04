@@ -35,7 +35,7 @@ pub struct InitializeAccountWindowedBreakerV0<'info> {
   pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
+pub fn initialize_account_windowed_breaker(
   ctx: Context<InitializeAccountWindowedBreakerV0>,
   args: InitializeAccountWindowedBreakerArgsV0,
 ) -> Result<()> {

@@ -5,6 +5,7 @@ use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
+    #[account(mut)]
     pub registrar: Box<Account<'info, Registrar>>,
 
     // checking the PDA address it just an extra precaution,

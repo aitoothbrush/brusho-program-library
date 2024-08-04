@@ -330,13 +330,13 @@ mod tests {
             reserved2: [0; 40],
             current_reward_amount_per_second: Exponential::new(0),
             last_reward_amount_per_second_rotated_ts: 0,
+            issued_reward_amount: 0,
             reward_index: Exponential::new(0),
             reward_accrual_ts: 0,
-            issued_reward_amount: 0,
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
-            reserved3: [0; 31],
+            reserved3: [0; 55],
         }
     }
 

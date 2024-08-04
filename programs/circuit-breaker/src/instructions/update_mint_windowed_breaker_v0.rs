@@ -18,7 +18,7 @@ pub struct UpdateMintWindowedBreakerV0<'info> {
   pub circuit_breaker: Box<Account<'info, MintWindowedCircuitBreakerV0>>,
 }
 
-pub fn handler(
+pub fn update_mint_windowed_breaker(
   ctx: Context<UpdateMintWindowedBreakerV0>,
   args: UpdateMintWindowedBreakerArgsV0,
 ) -> Result<()> {

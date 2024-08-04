@@ -7,9 +7,9 @@ use anchor_spl::token::Mint;
 
 const SCALED_FACTOR_BASE: u64 = 1_000_000_000;
 /// Total amount of staking rewards
-const TOTAL_REWARD_AMOUNT: u64 = 770000000; // 7.7b
+const TOTAL_REWARD_AMOUNT: u64 = 770_000_000_000_000; // 7.7b
 ///
-const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195000000;
+const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195_000_000_000_000; // 195M
 /// After how many seconds the annual reward amount need to be updated
 const SECS_PER_YEAR: u64 = SECS_PER_DAY * 365;
 
@@ -51,10 +51,10 @@ pub struct Registrar {
     pub time_offset: i64,
 
     pub bump: u8,
-    pub reserved3: [u8; 31],
+    pub reserved3: [u8; 55],
 }
 const_assert!(
-    std::mem::size_of::<Registrar>() == 4 * 32 + 64 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 31
+    std::mem::size_of::<Registrar>() == 4 * 32 + 64 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 55
 );
 const_assert!(std::mem::size_of::<Registrar>() % 8 == 0);
 
@@ -226,66 +226,66 @@ const_assert!(std::mem::size_of::<DepositConfig>() == 3 * 8);
 const_assert!(std::mem::size_of::<DepositConfig>() % 8 == 0);
 
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
-#[repr(C)]
-pub struct Exponential(pub [u8; 16]);
+pub struct Exponential {
+    v: u128,
+}
 pub const EXP_SCALE: u128 = 1_000_000_000_000_000_000;
 
 impl Exponential {
     #[inline(always)]
     pub fn new(num: u128) -> Exponential {
-        Exponential(EXP_SCALE.checked_mul(num).unwrap().to_le_bytes())
+        Exponential {
+            v: EXP_SCALE.checked_mul(num).unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn new_with_denom(num: u128, denom: u128) -> Exponential {
-        Exponential(
-            EXP_SCALE
+        Exponential {
+            v: EXP_SCALE
                 .checked_mul(num)
                 .unwrap()
                 .checked_div(denom)
-                .unwrap()
-                .to_le_bytes(),
-        )
+                .unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn as_u128(&self) -> u128 {
-        u128::from_le_bytes(self.0)
+        self.v
     }
 
     #[inline(always)]
     pub fn add_exp(&self, exp: Exponential) -> Exponential {
-        Exponential(
-            self.as_u128()
-                .checked_add(exp.as_u128())
-                .unwrap()
-                .to_le_bytes(),
-        )
+        Exponential {
+            v: self.v.checked_add(exp.v).unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn sub_exp(&self, exp: Exponential) -> Exponential {
-        Exponential(
-            self.as_u128()
-                .checked_sub(exp.as_u128())
-                .unwrap()
-                .to_le_bytes(),
-        )
+        Exponential {
+            v: self.v.checked_sub(exp.v).unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn mul_scalar(&self, scalar: u128) -> Exponential {
-        Exponential(self.as_u128().checked_mul(scalar).unwrap().to_le_bytes())
+        Exponential {
+            v: self.v.checked_mul(scalar).unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn div_scalar(&self, scalar: u128) -> Exponential {
-        Exponential(self.as_u128().checked_div(scalar).unwrap().to_le_bytes())
+        Exponential {
+            v: self.v.checked_div(scalar).unwrap(),
+        }
     }
 
     #[inline(always)]
     pub fn truncate(&self) -> u128 {
-        self.as_u128().checked_div(EXP_SCALE).unwrap()
+        self.v.checked_div(EXP_SCALE).unwrap()
     }
 }
 
@@ -340,7 +340,7 @@ mod tests {
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
-            reserved3: [0; 31],
+            reserved3: [0; 55],
         }
     }
 
@@ -445,8 +445,8 @@ mod tests {
         );
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
 
-        // update issued reward amount 
-        registrar.issued_reward_amount += TOTAL_REWARD_AMOUNT / 10;   
+        // update issued reward amount
+        registrar.issued_reward_amount += TOTAL_REWARD_AMOUNT / 10;
 
         // forward 364 days
         curr_ts += (364 * SECONDS_PER_DAY) as i64;
@@ -463,25 +463,28 @@ mod tests {
         registrar.accure_rewards(curr_ts);
 
         assert_eq!(
-            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
+            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12
+                / 100
+                / (SECS_PER_YEAR as u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         // println!("{}", registrar.current_reward_amount_per_second);
 
-        // set issued reward amount 
-        registrar.issued_reward_amount += TOTAL_REWARD_AMOUNT / 10;   
+        // set issued reward amount
+        registrar.issued_reward_amount += TOTAL_REWARD_AMOUNT / 10;
 
         // forward 1 year
         curr_ts += SECONDS_PER_YEAR as i64;
         registrar.accure_rewards(curr_ts);
 
         assert_eq!(
-            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
+            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12
+                / 100
+                / (SECS_PER_YEAR as u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         // println!("{}", registrar.current_reward_amount_per_second);
 
         Ok(())
     }
-
 }

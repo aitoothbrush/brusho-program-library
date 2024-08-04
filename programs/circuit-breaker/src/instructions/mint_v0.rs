@@ -26,7 +26,7 @@ pub struct MintV0<'info> {
   pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<MintV0>, args: MintArgsV0) -> Result<()> {
+pub fn mint(ctx: Context<MintV0>, args: MintArgsV0) -> Result<()> {
   let circuit_breaker = &mut ctx.accounts.circuit_breaker;
 
   circuit_breaker.last_window = enforce_window(

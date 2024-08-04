@@ -18,7 +18,7 @@ pub struct UpdateAccountWindowedBreakerV0<'info> {
   pub authority: Signer<'info>,
 }
 
-pub fn handler(
+pub fn update_account_windowed_breaker(
   ctx: Context<UpdateAccountWindowedBreakerV0>,
   args: UpdateAccountWindowedBreakerArgsV0,
 ) -> Result<()> {

@@ -1,9 +1,10 @@
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
-import { SendTransactionError, Connection, PublicKey, Keypair, TransactionInstruction, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { SendTransactionError, Commitment, Connection, PublicKey, Keypair, TransactionInstruction, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { VoterStakeRegistry } from "../../target/types/voter_stake_registry";
+import { CircuitBreaker } from "../../target/types/circuit_breaker";
 import { assert } from "chai";
-import { createMint, mintTo, getAccount, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccount } from "@solana/spl-token";
+import { createMint, mintTo, getAccount, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MintMaxVoteWeightSource, MintMaxVoteWeightSourceType, withCreateRealm, withCreateTokenOwnerRecord } from "@solana/spl-governance";
 
 // Configure the client to use the local cluster.
@@ -12,10 +13,15 @@ anchor.setProvider(anchor.AnchorProvider.env());
 export const GOV_PROGRAM_ID = new PublicKey("GovernanceProgramTest1111111111111111111111");
 
 export const VSR_PROGRAM = anchor.workspace.VoterStakeRegistry as Program<VoterStakeRegistry>;
+export const CIRCUIT_BREAKER_PROGRAM = anchor.workspace.CircuitBreaker as Program<CircuitBreaker>;
 
 export const CONNECTION: Connection = anchor.getProvider().connection;
 
 export const SECS_PER_DAY = new anchor.BN(86_400);
+export const SECS_PER_YEAR = SECS_PER_DAY.muln(365);
+export const EXP_SCALE = new anchor.BN("1000000000000000000");
+export const TOTAL_REWARD_AMOUNT = new anchor.BN("770000000000000"); // 7.7b
+export const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR = new anchor.BN("195000000000000"); // 195M
 
 /// Seconds in one month.
 export const SECS_PER_MONTH = SECS_PER_DAY.muln(365).divn(12);
@@ -70,6 +76,10 @@ export async function assertThrowsSendTransactionError(
   throw "No SendTransactionError throws"
 }
 
+export function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 
 // this airdrops sol to an address
 export async function airdropSol(publicKey, amount) {
@@ -94,7 +104,7 @@ export async function newSigner(): Promise<Keypair> {
 }
 
 export async function newMint(signer) {
-  const mint = await createMint(CONNECTION, signer, signer.publicKey, signer.publicKey, 6);
+  const mint = await createMint(CONNECTION, signer, signer.publicKey, signer.publicKey, 6, Keypair.generate());
   return mint;
 }
 
@@ -109,7 +119,7 @@ export async function mintTokenToWallet(mint: PublicKey, mintAuthority: Keypair,
 }
 
 export async function mintTokenToAccount(mint: PublicKey, mintAuthority: Keypair, tokenAccount: PublicKey, amount: anchor.BN) {
-  await mintTo(CONNECTION, mintAuthority, mint, tokenAccount, mintAuthority, amount.toNumber());
+  await mintTo(CONNECTION, mintAuthority, mint, tokenAccount, mintAuthority, amount.toNumber(), undefined);
 }
 
 export async function getTokenAccount(address: PublicKey) {
@@ -178,32 +188,41 @@ export async function createRegistrar(
   governingTokenMint: PublicKey,
   votingConfig: VotingConfig,
   depositConfig: DepositConfig,
+  circuit_breaker_threshold: anchor.BN,
   payer: Keypair,
-): Promise<[PublicKey, number]> {
+): Promise<[PublicKey, number, PublicKey, PublicKey]> {
   const registrarSeeds = [realm.toBytes(), Buffer.from("registrar"), governingTokenMint.toBytes()];
-  const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(registrarSeeds, VSR_PROGRAM.programId);
+  const [registrar, registrarBump] = anchor.web3.PublicKey.findProgramAddressSync(registrarSeeds, VSR_PROGRAM.programId);
+
+  const vault = getAssociatedTokenAddressSync(governingTokenMint, registrar, true);
+  const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+  const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
   await VSR_PROGRAM.methods.createRegistrar(
-    bump,
+    registrarBump,
     votingConfig,
-    depositConfig
+    depositConfig,
+    circuit_breaker_threshold
   ).accounts({
     registrar,
     realm: realm,
+    vault,
+    circuitBreaker,
     governanceProgramId: GOV_PROGRAM_ID,
+    circuitBreakerProgram: CIRCUIT_BREAKER_PROGRAM.programId,
     realmGoverningTokenMint: governingTokenMint,
     realmAuthority: realmAuthority.publicKey,
     payer: payer.publicKey,
   }).signers([payer, realmAuthority])
     .rpc()
 
-  return [registrar, bump];
+  return [registrar, registrarBump, vault, circuitBreaker];
 }
 
 export async function createVoter(
-  realm: PublicKey, 
-  governingTokenMint: PublicKey, 
-  registrar: PublicKey, 
+  realm: PublicKey,
+  governingTokenMint: PublicKey,
+  registrar: PublicKey,
   payer: Keypair
 ): Promise<[Keypair, PublicKey, PublicKey, PublicKey, PublicKey]> {
   let voterAuthority = await newSigner();
@@ -236,13 +255,13 @@ export async function createVoter(
   return [voterAuthority, voter, voterWeightRecord, vault, tokenOwnerRecord];
 }
 
-export async function fastup(registrar: PublicKey, realmAuthority: Keypair, seconds: anchor.BN) {
+export async function fastup(registrar: PublicKey, realmAuthority: Keypair, seconds: anchor.BN, commitment: Commitment = "processed") {
   const registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
   const currTimeOffset = registrarData.timeOffset;
 
   await VSR_PROGRAM.methods.setTimeOffset(currTimeOffset.add(seconds))
     .accounts({ registrar, realmAuthority: realmAuthority.publicKey })
-    .signers([realmAuthority]).rpc();
+    .signers([realmAuthority]).rpc({commitment});
 }
 
 export type DepositConfig = {
@@ -252,9 +271,9 @@ export type DepositConfig = {
 }
 
 export type VotingConfig = {
-    baselineVoteWeightScaledFactor: anchor.BN,
-    maxExtraLockupVoteWeightScaledFactor: anchor.BN,
-    lockupSaturationSecs: anchor.BN,
+  baselineVoteWeightScaledFactor: anchor.BN,
+  maxExtraLockupVoteWeightScaledFactor: anchor.BN,
+  lockupSaturationSecs: anchor.BN,
 }
 
 export function defaultVotingConfig() {

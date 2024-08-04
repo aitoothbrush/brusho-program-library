@@ -33,7 +33,7 @@ pub struct InitializeMintWindowedBreakerV0<'info> {
   pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
+pub fn initialize_mint_windowed_breaker(
   ctx: Context<InitializeMintWindowedBreakerV0>,
   args: InitializeMintWindowedBreakerArgsV0,
 ) -> Result<()> {

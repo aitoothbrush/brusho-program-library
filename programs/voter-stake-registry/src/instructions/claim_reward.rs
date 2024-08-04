@@ -26,8 +26,8 @@ pub struct ClaimReward<'info> {
 
     #[account(
         mut,
-        associated_token::authority = circuit_breaker,
-        associated_token::mint = registrar.governing_token_mint,
+        token::authority = circuit_breaker,
+        token::mint = registrar.governing_token_mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 

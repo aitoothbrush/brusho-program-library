@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Token, TokenAccount, Transfer};
 
 use crate::{window::enforce_window, AccountWindowedCircuitBreakerV0};
 
@@ -25,7 +25,7 @@ pub struct TransferV0<'info> {
   pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<TransferV0>, args: TransferArgsV0) -> Result<()> {
+pub fn transfer(ctx: Context<TransferV0>, args: TransferArgsV0) -> Result<()> {
   let circuit_breaker = &mut ctx.accounts.circuit_breaker;
 
   circuit_breaker.last_window = enforce_window(
@@ -36,7 +36,7 @@ pub fn handler(ctx: Context<TransferV0>, args: TransferArgsV0) -> Result<()> {
     Clock::get()?.unix_timestamp,
   )?;
 
-  transfer(
+  anchor_spl::token::transfer(
     CpiContext::new_with_signer(
       ctx.accounts.token_program.to_account_info(),
       Transfer {
