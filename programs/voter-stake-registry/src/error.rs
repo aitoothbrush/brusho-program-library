@@ -45,7 +45,7 @@ pub enum VsrError {
     #[msg("")]
     NodeDepositUnreleasableAtPresent,
     #[msg("")]
-    ZeroDepositAmount,
+    ZeroAmount,
     #[msg("")]
     NodeSecurityDepositMustBePositive,
     #[msg("")]

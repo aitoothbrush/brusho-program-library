@@ -28,7 +28,7 @@ pub fn ordinary_release_deposit(
     target_deposit_entry_index: u8,
     amount: u64,
 ) -> Result<()> {
-    require!(amount > 0, VsrError::ZeroDepositAmount);
+    require!(amount > 0, VsrError::ZeroAmount);
     require!(
         deposit_entry_index != NODE_DEPOSIT_ENTRY_INDEX
             && target_deposit_entry_index != NODE_DEPOSIT_ENTRY_INDEX,
