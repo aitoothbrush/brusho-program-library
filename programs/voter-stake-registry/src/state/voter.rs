@@ -198,13 +198,13 @@ impl Voter {
         curr_ts: i64,
         amount: u64,
         registrar: &mut Registrar,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         self.accure_rewards(curr_ts, registrar)?;
 
         let d = self.deposit_entry_at_mut(index)?;
         d.withdraw(curr_ts, amount)?;
 
-        Ok(())
+        Ok(d.get_amount_deposited_native())
     }
 
     pub fn claim_reward(&mut self, curr_ts: i64, registrar: &mut Registrar) -> Result<u64> {
@@ -597,7 +597,7 @@ mod tests {
         // Error happens if curr_ts != registrar.reward_accrual_ts
         assert_eq!(
             voter.withdraw(0, 0, 0, &mut registrar_data),
-            Err(error!(VsrError::InternalProgramError)) as Result<()>
+            Err(error!(VsrError::InternalProgramError)) as Result<u64>
         );
         voter.withdraw(0, 1, 0, &mut registrar_data)?;
         assert_eq!(voter.reward_claimable_amount, 10);

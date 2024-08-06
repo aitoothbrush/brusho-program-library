@@ -113,7 +113,10 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     // accure rewards
     registrar.accure_rewards(curr_ts);
 
-    voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
+    let entry_amount_deposited_native = voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
+    if entry_amount_deposited_native == 0 {
+        voter.deactivate(deposit_entry_index, curr_ts, registrar)?;
+    }
 
     msg!(
         "Withdraw: amount {}, deposit index {}",

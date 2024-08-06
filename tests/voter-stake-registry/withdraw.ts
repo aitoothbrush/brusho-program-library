@@ -302,8 +302,8 @@ describe("withdraw!", () => {
     const tx = await CONNECTION.getTransaction(txId, {commitment: 'confirmed'});
 
     // verify voter account
-    const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
-    const releaseEntry = voterData.deposits.at(releaseEntryIndex);
+    let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+    let releaseEntry = voterData.deposits.at(releaseEntryIndex);
     assert.isTrue(releaseEntry.isActive)
     assert.isTrue(releaseEntry.amountDepositedNative.eq(depositAmount.sub(withdrawAmount)))
     assert.isTrue(releaseEntry.amountInitiallyLockedNative.eq(depositAmount))
@@ -315,6 +315,27 @@ describe("withdraw!", () => {
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
     assert.equal(registrarData.permanentlyLockedAmount.toString(), prevPermanentlyLockedAmount.toString());
     assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+
+    // withdraw remains, deposit entry should have been deactivated.
+    await VSR_PROGRAM.methods
+      .withdraw(releaseEntryIndex, depositAmount.sub(withdrawAmount))
+      .accounts({
+        registrar,
+        voter,
+        voterAuthority: voterAuthority.publicKey,
+        tokenOwnerRecord,
+        voterWeightRecord,
+        vault,
+        destination: voterTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID
+      })
+      .signers([voterAuthority])
+      .rpc({commitment: "confirmed"})
+
+    // verify voter account
+    voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+    releaseEntry = voterData.deposits.at(releaseEntryIndex);
+    assert.isFalse(releaseEntry.isActive)
   });
 });
 
