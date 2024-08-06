@@ -154,22 +154,6 @@ describe("ordinary_deposit!", () => {
 
 
   it("with_incorrect_args_should_fail", async () => {
-    await assertThrowsAnchorError('ZeroDepositAmount', async () => {
-      await VSR_PROGRAM.methods
-        .ordinaryDeposit(1, new anchor.BN(0), lockupDayily(15))
-        .accounts({
-          registrar,
-          voter,
-          vault,
-          depositToken: voterTokenAccount,
-          depositAuthority: voterAuthority.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID
-        }).signers([voterAuthority])
-        .rpc();
-    },
-      (anchorErr) => { },
-      false);
-
     await assertThrowsAnchorError('NodeDepositReservedEntryIndex', async () => {
       await VSR_PROGRAM.methods
         .ordinaryDeposit(0, new anchor.BN(1e9), lockupDayily(15)) // index 0 is reserved for node deposit
@@ -303,9 +287,9 @@ describe("ordinary_deposit!", () => {
     // fastup time
     await fastup(registrar, authority, new anchor.BN(86400));
 
-    // third time
+    // third time, 0 amount
     await VSR_PROGRAM.methods
-      .ordinaryDeposit(depositEntryIndex, depositAmount, lockupMonthly(6)) // change lockup duration to 6 month
+      .ordinaryDeposit(depositEntryIndex, new anchor.BN(0), lockupMonthly(6)) // change lockup duration to 6 month
       .accounts({
         registrar,
         voter,
@@ -316,7 +300,6 @@ describe("ordinary_deposit!", () => {
       }).signers([voterAuthority])
       .rpc();
 
-    totalDepositAmount = depositAmount.muln(3);
     voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     depositEntry = voterData.deposits.at(depositEntryIndex);
     newlockupStartTs = depositEntry.lockup.startTs;

@@ -60,14 +60,15 @@ pub fn ordinary_deposit(
     amount: u64,
     duraiton: LockupTimeDuration,
 ) -> Result<()> {
-    require!(amount > 0, VsrError::ZeroDepositAmount);
     require!(
         deposit_entry_index != NODE_DEPOSIT_ENTRY_INDEX,
         VsrError::NodeDepositReservedEntryIndex
     );
 
-    // Deposit tokens into the vault
-    token::transfer(ctx.accounts.transfer_ctx(), amount)?;
+    if amount > 0 {
+        // Deposit tokens into the vault
+        token::transfer(ctx.accounts.transfer_ctx(), amount)?;
+    }
 
     let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
@@ -122,7 +123,9 @@ pub fn ordinary_deposit(
         voter: voter.get_voter_authority(),
         deposit_entry_index,
         amount: amount,
-        lockup: voter.deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?.get_lockup()
+        lockup: voter
+            .deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?
+            .get_lockup()
     });
 
     Ok(())
