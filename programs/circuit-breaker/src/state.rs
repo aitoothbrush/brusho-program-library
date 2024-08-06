@@ -35,17 +35,6 @@ impl WindowedCircuitBreakerConfigV0 {
 
 #[account]
 #[derive(Default)]
-pub struct MintWindowedCircuitBreakerV0 {
-  pub mint: Pubkey,
-  pub authority: Pubkey,
-  pub mint_authority: Pubkey,
-  pub config: WindowedCircuitBreakerConfigV0,
-  pub last_window: WindowV0,
-  pub bump_seed: u8,
-}
-
-#[account]
-#[derive(Default)]
 pub struct AccountWindowedCircuitBreakerV0 {
   pub token_account: Pubkey,
   pub authority: Pubkey,
