@@ -100,7 +100,7 @@ describe("ordinary_release_deposit!", () => {
   });
 
   it("with_incorrect_args_should_fail", async () => {
-    await assertThrowsAnchorError('ZeroDepositAmount', async () => {
+    await assertThrowsAnchorError('ZeroAmount', async () => {
       await VSR_PROGRAM.methods
         .ordinaryReleaseDeposit(1, 2, new anchor.BN(0)) // zero amount
         .accounts({
