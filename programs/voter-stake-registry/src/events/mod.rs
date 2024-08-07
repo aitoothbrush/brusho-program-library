@@ -34,3 +34,18 @@ pub struct OrdinaryReleaseDepositEvent {
     pub target_deposit_entry_index: u8,
     pub amount: u64,
 }
+
+#[event]
+#[derive(Debug)]
+pub struct WithdrawEvent {
+    pub voter: Pubkey,
+    pub deposit_entry_index: u8,
+    pub amount: u64,
+}
+
+#[event]
+#[derive(Debug)]
+pub struct ClaimRewardEvent {
+    pub voter: Pubkey,
+    pub amount: u64,
+}

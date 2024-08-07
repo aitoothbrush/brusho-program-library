@@ -1,3 +1,4 @@
+use crate::events::ClaimRewardEvent;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
@@ -83,6 +84,11 @@ pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
             amount: claimed_amount,
         },
     )?;
+
+    emit!(ClaimRewardEvent {
+        voter: voter.get_voter_authority(),
+        amount: claimed_amount
+    });
 
     Ok(())
 }

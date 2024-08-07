@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::WithdrawEvent;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
@@ -118,16 +119,16 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
         voter.deactivate(deposit_entry_index, curr_ts, registrar)?;
     }
 
-    msg!(
-        "Withdraw: amount {}, deposit index {}",
-        amount,
-        deposit_entry_index,
-    );
-
     // Update the voter weight record
     let record = &mut ctx.accounts.voter_weight_record;
     record.voter_weight = voter.weight(curr_ts, registrar)?;
     record.voter_weight_expiry = Some(Clock::get()?.slot);
+
+    emit!(WithdrawEvent {
+        voter: voter.get_voter_authority(),
+        deposit_entry_index,
+        amount,
+    });
 
     Ok(())
 }
