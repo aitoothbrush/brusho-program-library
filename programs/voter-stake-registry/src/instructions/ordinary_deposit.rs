@@ -124,7 +124,7 @@ pub fn ordinary_deposit(
         deposit_entry_index,
         amount: amount,
         lockup: voter
-            .deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?
+            .deposit_entry_at(deposit_entry_index)?
             .get_lockup()
     });
 
