@@ -145,4 +145,8 @@ pub mod voter_stake_registry {
     pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
         instructions::claim_reward(ctx)
     }
+
+    pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
+        instructions::log_voter_info(ctx)
+    }
 }

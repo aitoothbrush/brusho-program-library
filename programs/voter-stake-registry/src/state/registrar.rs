@@ -5,13 +5,13 @@ use crate::state::lockup::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-const SCALED_FACTOR_BASE: u64 = 1_000_000_000;
+pub const SCALED_FACTOR_BASE: u64 = 1_000_000_000;
 /// Total amount of staking rewards
-const TOTAL_REWARD_AMOUNT: u64 = 770_000_000_000_000; // 7.7b
-///
-const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195_000_000_000_000; // 195M
-/// After how many seconds the annual reward amount need to be updated
-const SECS_PER_YEAR: u64 = SECS_PER_DAY * 365;
+pub const TOTAL_REWARD_AMOUNT: u64 = 770_000_000_000_000; // 7.7b
+/// Floor of permanently locked tokens to be met for full rewards
+pub const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195_000_000_000_000; // 195M
+/// Seconds in a year
+pub const SECS_PER_YEAR: u64 = SECS_PER_DAY * 365;
 
 /// Instance of a voting rights distributor.
 #[account]
