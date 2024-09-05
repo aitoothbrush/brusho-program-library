@@ -43,7 +43,7 @@ pub fn close_voter<'info>(ctx: Context<'_, '_, 'info, 'info, CloseVoter<'info>>)
         // let voter_seeds = voter_seeds!(voter);
         // let voter_seeds =
         for account in ctx.remaining_accounts.iter() {
-            let token = Account::<TokenAccount>::try_from(&account).unwrap();
+            let token = Account::<TokenAccount>::try_from(account).unwrap();
             require_keys_eq!(
                 token.owner,
                 ctx.accounts.voter.key(),
