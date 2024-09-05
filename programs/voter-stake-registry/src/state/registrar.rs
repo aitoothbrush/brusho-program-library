@@ -7,7 +7,7 @@ use anchor_spl::token::Mint;
 
 pub const SCALED_FACTOR_BASE: u64 = 1_000_000_000;
 /// Total amount of staking rewards
-pub const TOTAL_REWARD_AMOUNT: u64 = 770_000_000_000_000; // 7.7b
+pub const TOTAL_REWARD_AMOUNT: u64 = 770_000_000_000_000; // 770M
 /// Floor of permanently locked tokens to be met for full rewards
 pub const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195_000_000_000_000; // 195M
 /// Seconds in a year
