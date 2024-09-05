@@ -69,9 +69,9 @@ pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
         VsrError::DuplicateNodeDeposit
     );
 
-    // accure rewards
+    // accrue rewards
     let curr_ts = registrar.clock_unix_timestamp();
-    registrar.accure_rewards(curr_ts);
+    registrar.accrue_rewards(curr_ts);
 
     let node_security_deposit = registrar.deposit_config.node_security_deposit;
     voter.activate(

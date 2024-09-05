@@ -108,7 +108,7 @@ impl Voter {
         Ok(d)
     }
 
-    fn accure_rewards(&mut self, curr_ts: i64, registrar: &Registrar) -> Result<()> {
+    fn accrue_rewards(&mut self, curr_ts: i64, registrar: &Registrar) -> Result<()> {
         require_eq!(
             curr_ts,
             registrar.reward_accrual_ts,
@@ -144,7 +144,7 @@ impl Voter {
         lockup: Lockup,
         registrar: &mut Registrar,
     ) -> Result<()> {
-        self.accure_rewards(curr_ts, registrar)?;
+        self.accrue_rewards(curr_ts, registrar)?;
 
         let d = self.deposit_entry_at_mut(index)?;
         require!(!d.is_active(), VsrError::InternalProgramError);
@@ -154,7 +154,7 @@ impl Voter {
     }
 
     pub fn deactivate(&mut self, index: u8, curr_ts: i64, registrar: &mut Registrar) -> Result<()> {
-        self.accure_rewards(curr_ts, registrar)?;
+        self.accrue_rewards(curr_ts, registrar)?;
 
         let d = self.deposit_entry_at_mut(index)?;
         // Deduct the permanent lock amount if it's lockup is not vesting kind
@@ -176,7 +176,7 @@ impl Voter {
         amount: u64,
         registrar: &mut Registrar,
     ) -> Result<()> {
-        self.accure_rewards(curr_ts, registrar)?;
+        self.accrue_rewards(curr_ts, registrar)?;
 
         let d = self.deposit_entry_at_mut(index)?;
         d.deposit(curr_ts, amount)?;
@@ -199,7 +199,7 @@ impl Voter {
         amount: u64,
         registrar: &mut Registrar,
     ) -> Result<u64> {
-        self.accure_rewards(curr_ts, registrar)?;
+        self.accrue_rewards(curr_ts, registrar)?;
 
         let d = self.deposit_entry_at_mut(index)?;
         d.withdraw(curr_ts, amount)?;
@@ -208,7 +208,7 @@ impl Voter {
     }
 
     pub fn claim_reward(&mut self, curr_ts: i64, registrar: &mut Registrar) -> Result<u64> {
-        self.accure_rewards(curr_ts, registrar)?;
+        self.accrue_rewards(curr_ts, registrar)?;
 
         let claimed_amount = self.reward_claimable_amount;
         self.reward_claimable_amount = 0;
@@ -549,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn accure_rewards_test() -> Result<()> {
+    fn accrue_rewards_test() -> Result<()> {
         let voter_authority = Pubkey::new_unique();
         let registrar = Pubkey::new_unique();
         let mut registrar_data = new_registrar_data();

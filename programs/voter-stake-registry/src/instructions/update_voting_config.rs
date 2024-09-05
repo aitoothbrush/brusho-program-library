@@ -6,7 +6,7 @@ use anchor_spl::token::Mint;
 #[derive(Accounts)]
 pub struct UpdateVotingConfig<'info> {
     #[account(
-        mut, 
+        mut,
         has_one = governing_token_mint,
         has_one = realm_authority,
     )]

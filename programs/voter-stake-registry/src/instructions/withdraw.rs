@@ -111,8 +111,8 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     }
 
     let curr_ts = registrar.clock_unix_timestamp();
-    // accure rewards
-    registrar.accure_rewards(curr_ts);
+    // accrue rewards
+    registrar.accrue_rewards(curr_ts);
 
     let entry_amount_deposited_native = voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
     if entry_amount_deposited_native == 0 {

@@ -36,9 +36,9 @@ pub fn node_release_deposit(
         VsrError::ActiveDepositEntryIndex
     );
 
-    // accure rewards
+    // accrue rewards
     let curr_ts = registrar.clock_unix_timestamp();
-    registrar.accure_rewards(curr_ts);
+    registrar.accrue_rewards(curr_ts);
 
     let node_security_deposit = d_entry.get_amount_deposited_native();
     let lockup = d_entry.get_lockup();

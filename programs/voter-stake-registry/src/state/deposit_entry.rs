@@ -238,7 +238,7 @@ impl DepositEntry {
     ) -> Result<u64> {
         let periods_left = self.lockup.periods_left(curr_ts)?;
         let periods_total = self.lockup.periods_total();
-        let period_secs = self.lockup.kind().period_secs() as u64;
+        let period_secs = self.lockup.kind().period_secs();
 
         if periods_left == 0 {
             return Ok(0);

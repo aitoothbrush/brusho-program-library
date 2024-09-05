@@ -70,9 +70,9 @@ pub fn create_voter(
     let registrar = &mut ctx.accounts.registrar;
     let voter_authority = ctx.accounts.voter_authority.key();
 
-    // accure rewards
+    // accrue rewards
     let curr_ts = registrar.clock_unix_timestamp();
-    registrar.accure_rewards(curr_ts);
+    registrar.accrue_rewards(curr_ts);
 
     let voter = &mut ctx.accounts.voter;
     voter.set_inner(Voter::new(

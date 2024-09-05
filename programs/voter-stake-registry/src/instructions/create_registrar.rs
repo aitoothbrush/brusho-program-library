@@ -152,7 +152,7 @@ pub fn create_registrar(
 
     // Initialize reward stuffs
     let curr_ts = registrar.clock_unix_timestamp();
-    registrar.accure_rewards(curr_ts);
+    registrar.accrue_rewards(curr_ts);
 
     // Check for overflow in vote weight
     registrar.max_vote_weight(&ctx.accounts.realm_governing_token_mint)?;

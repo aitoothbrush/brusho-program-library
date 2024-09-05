@@ -82,7 +82,7 @@ impl Registrar {
         Ok(sum)
     }
 
-    pub fn accure_rewards(&mut self, curr_ts: i64) {
+    pub fn accrue_rewards(&mut self, curr_ts: i64) {
         let seconds_delta = curr_ts.checked_sub(self.reward_accrual_ts).unwrap() as u64;
         if seconds_delta == 0 {
             return;
@@ -345,11 +345,11 @@ mod tests {
     }
 
     #[test]
-    fn accure_rewards_initialize_test() -> Result<()> {
+    fn accrue_rewards_initialize_test() -> Result<()> {
         let mut registrar = new_registrar_data();
 
         let curr_ts = (SECS_PER_YEAR * 10) as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
             (TOTAL_REWARD_AMOUNT as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
@@ -365,14 +365,14 @@ mod tests {
     }
 
     #[test]
-    fn accure_rewards_test() -> Result<()> {
+    fn accrue_rewards_test() -> Result<()> {
         let mut registrar = new_registrar_data();
 
         let curr_ts = (SECS_PER_YEAR * 10) as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         // case 1: curr_ts == registrar.reward_accrual_ts
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         assert_eq!(0, registrar.reward_index.as_u128());
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
@@ -381,7 +381,7 @@ mod tests {
 
         // case 2: permanently_locked_amount == 0
         let curr_ts = curr_ts + SECS_PER_DAY as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         assert_eq!(0, registrar.reward_index.as_u128());
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
@@ -391,7 +391,7 @@ mod tests {
         // case 3:  0 < permanently_locked_amount < FULL_REWARD_PERMANENTLY_LOCKED_FLOOR
         let curr_ts = curr_ts + SECS_PER_DAY as i64;
         registrar.permanently_locked_amount = FULL_REWARD_PERMANENTLY_LOCKED_FLOOR / 2;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         let reward_index_delta = registrar
             .current_reward_amount_per_second
@@ -410,7 +410,7 @@ mod tests {
         let curr_ts = curr_ts + SECS_PER_DAY as i64;
         let registrar_cloned = registrar.clone();
         registrar.permanently_locked_amount = FULL_REWARD_PERMANENTLY_LOCKED_FLOOR * 2;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         let reward_index_delta = registrar
             .current_reward_amount_per_second
@@ -433,12 +433,12 @@ mod tests {
     }
 
     #[test]
-    fn accure_rewards_rotation_test() -> Result<()> {
+    fn accrue_rewards_rotation_test() -> Result<()> {
         let mut registrar = new_registrar_data();
 
         // initialize
         let mut curr_ts = SECONDS_PER_YEAR as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
         assert_eq!(
             ((TOTAL_REWARD_AMOUNT) as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
             registrar.current_reward_amount_per_second.as_u128()
@@ -450,7 +450,7 @@ mod tests {
 
         // forward 364 days
         curr_ts += (364 * SECONDS_PER_DAY) as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
         assert_eq!(
             (TOTAL_REWARD_AMOUNT as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
             registrar.current_reward_amount_per_second.as_u128()
@@ -460,7 +460,7 @@ mod tests {
 
         // forward 1 day more
         curr_ts += (1 * SECONDS_PER_DAY) as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
             ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12
@@ -475,7 +475,7 @@ mod tests {
 
         // forward 1 year
         curr_ts += SECONDS_PER_YEAR as i64;
-        registrar.accure_rewards(curr_ts);
+        registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
             ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12

@@ -58,7 +58,7 @@ pub fn ordinary_deposit(
     ctx: Context<OrdinaryDeposit>,
     deposit_entry_index: u8,
     amount: u64,
-    duraiton: LockupTimeDuration,
+    duration: LockupTimeDuration,
 ) -> Result<()> {
     require!(
         deposit_entry_index != NODE_DEPOSIT_ENTRY_INDEX,
@@ -73,7 +73,7 @@ pub fn ordinary_deposit(
     let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
     require_gte!(
-        duraiton.seconds(),
+        duration.seconds(),
         registrar
             .deposit_config
             .ordinary_deposit_min_lockup_duration
@@ -82,10 +82,10 @@ pub fn ordinary_deposit(
     );
 
     let curr_ts = registrar.clock_unix_timestamp();
-    let lockup = Lockup::new_from_kind(LockupKind::Constant(duraiton), curr_ts, curr_ts)?;
+    let lockup = Lockup::new_from_kind(LockupKind::Constant(duration), curr_ts, curr_ts)?;
 
-    // accure rewards
-    registrar.accure_rewards(curr_ts);
+    // accrue rewards
+    registrar.accrue_rewards(curr_ts);
 
     let mut amount_to_deposit: u64 = amount;
     if voter.is_active(deposit_entry_index)? {
@@ -97,11 +97,11 @@ pub fn ordinary_deposit(
                 VsrError::InternalProgramError
             );
 
-            if old_duration.seconds() > duraiton.seconds() {
+            if old_duration.seconds() > duration.seconds() {
                 return Err(error!(VsrError::CanNotShortenLockupDuration));
             }
 
-            if old_duration != duraiton {
+            if old_duration != duration {
                 amount_to_deposit = d_entry
                     .get_amount_deposited_native()
                     .checked_add(amount)
@@ -122,7 +122,7 @@ pub fn ordinary_deposit(
     emit!(OrdinaryDepositEvent {
         voter: voter.get_voter_authority(),
         deposit_entry_index,
-        amount: amount,
+        amount,
         lockup: voter
             .deposit_entry_at(deposit_entry_index)?
             .get_lockup()

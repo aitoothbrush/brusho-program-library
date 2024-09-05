@@ -56,9 +56,9 @@ pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
     let registrar = &mut ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter;
 
-    // accure rewards
+    // accrue rewards
     let curr_ts = registrar.clock_unix_timestamp();
-    registrar.accure_rewards(curr_ts);
+    registrar.accrue_rewards(curr_ts);
 
     // claim reward
     let claimed_amount = voter.claim_reward(curr_ts, registrar)?;

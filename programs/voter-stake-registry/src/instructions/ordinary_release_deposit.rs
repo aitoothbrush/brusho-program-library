@@ -42,8 +42,8 @@ pub fn ordinary_release_deposit(
     require!(d_entry.is_active(), VsrError::InactiveDepositEntry);
 
     let curr_ts = registrar.clock_unix_timestamp();
-    // accure rewards
-    registrar.accure_rewards(curr_ts);
+    // accrue rewards
+    registrar.accrue_rewards(curr_ts);
 
     let lockup = d_entry.get_lockup();
     if let LockupKind::Constant(duration) = lockup.kind() {
