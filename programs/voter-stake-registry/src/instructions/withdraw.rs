@@ -104,7 +104,7 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
         // Governance may forbid withdraws, for example when engaged in a vote.
         let token_owner_record = load_token_owner_record(
             &ctx.accounts.token_owner_record.to_account_info(),
-            &voter,
+            voter,
             registrar,
         )?;
         token_owner_record.assert_can_withdraw_governing_tokens()?;
