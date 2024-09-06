@@ -43,6 +43,15 @@ pub struct CreateRegistrar<'info> {
     /// CHECK: Verified by cpi
     pub circuit_breaker: AccountInfo<'info>,
 
+    #[account(
+        init,
+        seeds = [realm.key().as_ref(), b"max-voter-weight-record".as_ref(), realm_governing_token_mint.key().as_ref()],
+        bump,
+        payer = payer,
+        space = size_of::<MaxVoterWeightRecord>(),
+    )]
+    pub max_voter_weight_record: Account<'info, MaxVoterWeightRecord>,
+
     /// An spl-governance realm
     ///
     /// realm is validated in the instruction:
@@ -135,6 +144,7 @@ pub fn create_registrar(
     )?;
 
     registrar.bump = registrar_bump;
+    registrar.max_voter_weight_record_bump = ctx.bumps.max_voter_weight_record;
     registrar.governance_program_id = ctx.accounts.governance_program_id.key();
     registrar.realm = ctx.accounts.realm.key();
     registrar.governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
@@ -149,6 +159,12 @@ pub fn create_registrar(
     registrar.permanently_locked_amount = 0;
     registrar.time_offset = 0;
 
+    // Initialize MaxVoterWeightRecord 
+    let max_voter_weight_record = &mut ctx.accounts.max_voter_weight_record;
+    max_voter_weight_record.account_discriminator =
+        spl_governance_addin_api::max_voter_weight::MaxVoterWeightRecord::ACCOUNT_DISCRIMINATOR;
+    max_voter_weight_record.realm = ctx.accounts.realm.key();
+    max_voter_weight_record.governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
 
     // Initialize reward stuffs
     let curr_ts = registrar.clock_unix_timestamp();

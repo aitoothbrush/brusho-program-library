@@ -20,7 +20,7 @@ export const CONNECTION: Connection = anchor.getProvider().connection;
 export const SECS_PER_DAY = new anchor.BN(86_400);
 export const SECS_PER_YEAR = SECS_PER_DAY.muln(365);
 export const EXP_SCALE = new anchor.BN("1000000000000000000");
-export const TOTAL_REWARD_AMOUNT = new anchor.BN("770000000000000"); // 7.7b
+export const TOTAL_REWARD_AMOUNT = new anchor.BN("770000000000000"); // 770M
 export const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR = new anchor.BN("195000000000000"); // 195M
 
 /// Seconds in one month.
@@ -190,13 +190,16 @@ export async function createRegistrar(
   depositConfig: DepositConfig,
   circuit_breaker_threshold: anchor.BN,
   payer: Keypair,
-): Promise<[PublicKey, number, PublicKey, PublicKey]> {
+): Promise<[PublicKey, number, PublicKey, PublicKey, PublicKey]> {
   const registrarSeeds = [realm.toBytes(), Buffer.from("registrar"), governingTokenMint.toBytes()];
   const [registrar, registrarBump] = anchor.web3.PublicKey.findProgramAddressSync(registrarSeeds, VSR_PROGRAM.programId);
 
   const vault = getAssociatedTokenAddressSync(governingTokenMint, registrar, true);
   const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
   const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+
+  const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), governingTokenMint.toBytes()];
+  const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
   await VSR_PROGRAM.methods.createRegistrar(
     registrarBump,
@@ -207,6 +210,7 @@ export async function createRegistrar(
     registrar,
     realm: realm,
     vault,
+    maxVoterWeightRecord,
     circuitBreaker,
     governanceProgramId: GOV_PROGRAM_ID,
     circuitBreakerProgram: CIRCUIT_BREAKER_PROGRAM.programId,
@@ -216,7 +220,7 @@ export async function createRegistrar(
   }).signers([payer, realmAuthority])
     .rpc()
 
-  return [registrar, registrarBump, vault, circuitBreaker];
+  return [registrar, registrarBump, vault, circuitBreaker, maxVoterWeightRecord];
 }
 
 export async function createVoter(

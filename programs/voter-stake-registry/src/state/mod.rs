@@ -9,8 +9,14 @@ mod registrar;
 mod voter;
 
 use crate::vote_weight_record;
+use crate::max_voter_weight_record;
 
 // Generate a VoteWeightRecord Anchor wrapper, owned by the current program.
 // VoteWeightRecords are unique in that they are defined by the SPL governance
 // program, but they are actually owned by this program.
 vote_weight_record!(crate::ID);
+
+// Generate a MaxVoterWeight Anchor wrapper, owned by the current program.
+// MaxVoterWeightRecordss are unique in that they are defined by the SPL governance
+// program, but they are actually owned by this program.
+max_voter_weight_record!(crate::ID);

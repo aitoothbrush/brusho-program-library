@@ -51,10 +51,11 @@ pub struct Registrar {
     pub time_offset: i64,
 
     pub bump: u8,
-    pub reserved3: [u8; 55],
+    pub max_voter_weight_record_bump: u8,
+    pub reserved3: [u8; 54],
 }
 const_assert!(
-    std::mem::size_of::<Registrar>() == 4 * 32 + 64 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 55
+    std::mem::size_of::<Registrar>() == 4 * 32 + 64 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 1 + 54
 );
 const_assert!(std::mem::size_of::<Registrar>() % 8 == 0);
 
@@ -340,7 +341,8 @@ mod tests {
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
-            reserved3: [0; 55],
+            max_voter_weight_record_bump: 0,
+            reserved3: [0; 54],
         }
     }
 

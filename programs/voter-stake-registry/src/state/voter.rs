@@ -336,7 +336,8 @@ mod tests {
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
-            reserved3: [0; 55],
+            max_voter_weight_record_bump: 0,
+            reserved3: [0; 54],
         }
     }
 

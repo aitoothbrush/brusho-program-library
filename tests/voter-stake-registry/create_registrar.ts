@@ -4,12 +4,14 @@ import { web3 } from "@coral-xyz/anchor";
 import { assertThrowsAnchorError, CIRCUIT_BREAKER_PROGRAM, CONNECTION, createRealm, defaultDepositConfig, defaultVotingConfig, DepositConfig, EXP_SCALE, getTokenAccount, GOV_PROGRAM_ID, lockupDayily, lockupMonthly, newMint, newSigner, SECS_PER_DAY, SECS_PER_YEAR, TOTAL_REWARD_AMOUNT, VotingConfig, VSR_PROGRAM } from "./helper";
 import { assert } from "chai";
 import { getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { getMaxVoterWeightRecord, getVoterWeightRecord } from "@solana/spl-governance";
 
 async function createRegistrar(
   bump: number,
   registrar: web3.PublicKey,
   vault: web3.PublicKey,
   circuitBreaker: web3.PublicKey,
+  maxVoterWeightRecord: web3.PublicKey,
   realm: web3.PublicKey,
   mint: web3.PublicKey,
   realmAuthority: web3.Keypair,
@@ -26,6 +28,10 @@ async function createRegistrar(
     depositConfig = defaultDepositConfig();
   }
 
+  if (circuit_breaker_threshold == undefined) {
+    circuit_breaker_threshold = new anchor.BN(1e10);
+  }
+
   return await VSR_PROGRAM.methods.createRegistrar(
     bump,
     votingConfig,
@@ -35,6 +41,7 @@ async function createRegistrar(
     registrar,
     vault,
     circuitBreaker,
+    maxVoterWeightRecord,
     realm: realm,
     governanceProgramId: GOV_PROGRAM_ID,
     circuitBreakerProgram: CIRCUIT_BREAKER_PROGRAM.programId,
@@ -58,9 +65,12 @@ describe("create_registrar!", () => {
       const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
       const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
       await assertThrowsAnchorError('ConstraintSeeds', async () => {
         // use councilMint 
-        await createRegistrar(bump, registrar, vault, circuitBreaker, realm, councilMint, realmAuthority, realmAuthority);
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, councilMint, realmAuthority, realmAuthority);
       })
     });
 
@@ -75,8 +85,11 @@ describe("create_registrar!", () => {
       const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
       const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
       await assertThrowsAnchorError('RequireEqViolated', async () => {
-        await createRegistrar(bump - 1, registrar, vault, circuitBreaker, realm, mint, realmAuthority, realmAuthority);
+        await createRegistrar(bump - 1, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority);
       });
     });
   });
@@ -93,6 +106,9 @@ describe("create_registrar!", () => {
       const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
       const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
       const votingConfig = {
         baselineVoteWeightScaledFactor: new anchor.BN(1e9),
         maxExtraLockupVoteWeightScaledFactor: new anchor.BN(0),
@@ -100,7 +116,7 @@ describe("create_registrar!", () => {
       };
 
       await assertThrowsAnchorError('LockupSaturationMustBePositive', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, realm, mint, realmAuthority, realmAuthority, votingConfig);
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig);
       });
     });
 
@@ -115,6 +131,9 @@ describe("create_registrar!", () => {
       const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
       const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
       const depositConfig = {
         ordinaryDepositMinLockupDuration: lockupDayily(15),
         nodeDepositLockupDuration: lockupMonthly(6),
@@ -122,7 +141,7 @@ describe("create_registrar!", () => {
       };
 
       await assertThrowsAnchorError('NodeSecurityDepositMustBePositive', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
       });
     });
   });
@@ -139,9 +158,12 @@ describe("create_registrar!", () => {
       const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
       const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
       const invalidRealmAuthority = await newSigner();
       await assertThrowsAnchorError('InvalidRealmAuthority', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, realm, mint, invalidRealmAuthority, realmAuthority);
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, invalidRealmAuthority, realmAuthority);
       })
     });
 
@@ -158,6 +180,9 @@ describe("create_registrar!", () => {
     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
+    const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+    const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+
     const votingConfig = defaultVotingConfig();
     const depositConfig = {
       ordinaryDepositMinLockupDuration: lockupDayily(15),
@@ -166,7 +191,7 @@ describe("create_registrar!", () => {
     };
 
     const circuitBreakerThreshold = new anchor.BN(1e9);
-    const txId = await createRegistrar(bump, registrar, vault, circuitBreaker, realm, mint, realmAuthority, realmAuthority, votingConfig, depositConfig, circuitBreakerThreshold);
+    const txId = await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig, depositConfig, circuitBreakerThreshold);
     const tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' })
 
     // assert vault has been initialized
@@ -210,6 +235,12 @@ describe("create_registrar!", () => {
     assert.equal(circuitBreakerData.config.windowSizeSeconds.toNumber(), SECS_PER_DAY.toNumber());
     assert.isTrue(circuitBreakerData.config.thresholdType.absolute != undefined);
     assert.equal(circuitBreakerData.config.threshold.toNumber(), circuitBreakerThreshold.toNumber());
+
+    // verify MaxVoterWeightRecord
+    const maxVoterWeightRecordData = await getMaxVoterWeightRecord(anchor.getProvider().connection, maxVoterWeightRecord);
+    assert.equal(maxVoterWeightRecordData.owner.toBase58(), VSR_PROGRAM.programId.toBase58());
+    assert.equal(maxVoterWeightRecordData.account.realm.toBase58(), realm.toBase58());
+    assert.equal(maxVoterWeightRecordData.account.governingTokenMint.toBase58(), mint.toBase58());
   });
 
 });
