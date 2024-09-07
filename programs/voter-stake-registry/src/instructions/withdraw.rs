@@ -100,21 +100,21 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     let voter = &mut ctx.accounts.voter;
 
     // Governance may forbid withdraws, for example when engaged in a vote.
-    if *ctx.accounts.token_owner_record.owner == registrar.governance_program_id {
-        // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner_record = load_token_owner_record(
-            &ctx.accounts.token_owner_record.to_account_info(),
-            voter,
-            registrar,
-        )?;
-        token_owner_record.assert_can_withdraw_governing_tokens()?;
-    }
+    let token_owner_record = load_token_owner_record(
+        &ctx.accounts.token_owner_record.to_account_info(),
+        voter,
+        registrar,
+    )?;
+    token_owner_record.assert_can_withdraw_governing_tokens()?;
 
-    let curr_ts = registrar.clock_unix_timestamp();
     // accrue rewards
+    let curr_ts = registrar.clock_unix_timestamp();
     registrar.accrue_rewards(curr_ts);
 
-    let entry_amount_deposited_native = voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
+    let entry_amount_deposited_native =
+        voter.withdraw(deposit_entry_index, curr_ts, amount, registrar)?;
+
+    // Deactivate deposit entry if no funds remains.
     if entry_amount_deposited_native == 0 {
         voter.deactivate(deposit_entry_index, curr_ts, registrar)?;
     }
