@@ -8,6 +8,7 @@ import { getMaxVoterWeightRecord, getVoterWeightRecord } from "@solana/spl-gover
 
 async function createRegistrar(
   bump: number,
+  maxVoterWeightRecordBump: number,
   registrar: web3.PublicKey,
   vault: web3.PublicKey,
   circuitBreaker: web3.PublicKey,
@@ -32,11 +33,18 @@ async function createRegistrar(
     circuit_breaker_threshold = new anchor.BN(1e10);
   }
 
+  const circuit_breaker_config = {
+    windowSizeSeconds: SECS_PER_DAY,
+    thresholdType: { absolute: {} },
+    threshold: circuit_breaker_threshold,
+  };
+
   return await VSR_PROGRAM.methods.createRegistrar(
     bump,
+    maxVoterWeightRecordBump,
     votingConfig,
     depositConfig,
-    circuit_breaker_threshold
+    circuit_breaker_config
   ).accounts({
     registrar,
     vault,
@@ -70,7 +78,7 @@ describe("create_registrar!", () => {
 
       await assertThrowsAnchorError('ConstraintSeeds', async () => {
         // use councilMint 
-        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, councilMint, realmAuthority, realmAuthority);
+        await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, councilMint, realmAuthority, realmAuthority);
       })
     });
 
@@ -89,7 +97,7 @@ describe("create_registrar!", () => {
       const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
       await assertThrowsAnchorError('RequireEqViolated', async () => {
-        await createRegistrar(bump - 1, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority);
+        await createRegistrar(bump - 1, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority);
       });
     });
   });
@@ -116,7 +124,7 @@ describe("create_registrar!", () => {
       };
 
       await assertThrowsAnchorError('LockupSaturationMustBePositive', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig);
+        await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig);
       });
     });
 
@@ -141,7 +149,7 @@ describe("create_registrar!", () => {
       };
 
       await assertThrowsAnchorError('NodeSecurityDepositMustBePositive', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
+        await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
       });
     });
   });
@@ -163,7 +171,7 @@ describe("create_registrar!", () => {
 
       const invalidRealmAuthority = await newSigner();
       await assertThrowsAnchorError('InvalidRealmAuthority', async () => {
-        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, invalidRealmAuthority, realmAuthority);
+        await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, invalidRealmAuthority, realmAuthority);
       })
     });
 
@@ -191,7 +199,7 @@ describe("create_registrar!", () => {
     };
 
     const circuitBreakerThreshold = new anchor.BN(1e9);
-    const txId = await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig, depositConfig, circuitBreakerThreshold);
+    const txId = await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig, depositConfig, circuitBreakerThreshold);
     const tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' })
 
     // assert vault has been initialized

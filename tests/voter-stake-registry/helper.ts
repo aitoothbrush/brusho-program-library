@@ -77,7 +77,7 @@ export async function assertThrowsSendTransactionError(
 }
 
 export function delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
@@ -201,11 +201,18 @@ export async function createRegistrar(
   const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), governingTokenMint.toBytes()];
   const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
+  const circuit_breaker_config = {
+    windowSizeSeconds: SECS_PER_DAY,
+    thresholdType: { absolute: {} },
+    threshold: circuit_breaker_threshold,
+  };
+
   await VSR_PROGRAM.methods.createRegistrar(
     registrarBump,
+    maxVoterWeightRecordBump,
     votingConfig,
     depositConfig,
-    circuit_breaker_threshold
+    circuit_breaker_config
   ).accounts({
     registrar,
     realm: realm,
@@ -265,7 +272,7 @@ export async function fastup(registrar: PublicKey, realmAuthority: Keypair, seco
 
   await VSR_PROGRAM.methods.setTimeOffset(currTimeOffset.add(seconds))
     .accounts({ registrar, realmAuthority: realmAuthority.publicKey })
-    .signers([realmAuthority]).rpc({commitment});
+    .signers([realmAuthority]).rpc({ commitment });
 }
 
 export type DepositConfig = {

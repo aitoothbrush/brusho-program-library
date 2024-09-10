@@ -1,12 +1,14 @@
 use anchor_lang::prelude::*;
 use instructions::*;
 use state::*;
+use circuit_breaker::WindowedCircuitBreakerConfigV0;
 
-mod error;
+pub mod error;
 pub mod events;
-mod governance;
-mod instructions;
+pub mod governance;
+pub mod instructions;
 pub mod state;
+pub mod circuit_breaker;
 
 #[macro_use]
 extern crate static_assertions;
@@ -65,11 +67,12 @@ pub mod voter_stake_registry {
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
         registrar_bump: u8,
+        max_voter_weight_record_bump: u8,
         voting_config: VotingConfig,
         deposit_config: DepositConfig,
-        circuit_breaker_threshold: u64,
+        circuit_breaker_config: WindowedCircuitBreakerConfigV0,
     ) -> Result<()> {
-        instructions::create_registrar(ctx, registrar_bump, voting_config, deposit_config, circuit_breaker_threshold)
+        instructions::create_registrar(ctx, registrar_bump, max_voter_weight_record_bump, voting_config, deposit_config, circuit_breaker_config)
     }
 
     pub fn create_voter(

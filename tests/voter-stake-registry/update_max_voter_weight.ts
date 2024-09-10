@@ -1,13 +1,14 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
 
-import { CIRCUIT_BREAKER_PROGRAM, createRealm, defaultDepositConfig, defaultVotingConfig, DepositConfig, GOV_PROGRAM_ID, mintTokenToWallet, newSigner, VotingConfig, VSR_PROGRAM } from "./helper";
+import { CIRCUIT_BREAKER_PROGRAM, createRealm, defaultDepositConfig, defaultVotingConfig, DepositConfig, GOV_PROGRAM_ID, mintTokenToWallet, newSigner, SECS_PER_DAY, VotingConfig, VSR_PROGRAM } from "./helper";
 import { assert } from "chai";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { getMaxVoterWeightRecord } from "@solana/spl-governance";
 
 async function createRegistrar(
   bump: number,
+  maxVoterWeightRecordBump: number,
   registrar: web3.PublicKey,
   vault: web3.PublicKey,
   circuitBreaker: web3.PublicKey,
@@ -32,11 +33,18 @@ async function createRegistrar(
     circuit_breaker_threshold = new anchor.BN(1e10);
   }
 
+  const circuit_breaker_config = {
+    windowSizeSeconds: SECS_PER_DAY,
+    thresholdType: { absolute: {} },
+    threshold: circuit_breaker_threshold,
+  };
+
   return await VSR_PROGRAM.methods.createRegistrar(
     bump,
+    maxVoterWeightRecordBump,
     votingConfig,
     depositConfig,
-    circuit_breaker_threshold
+    circuit_breaker_config
   ).accounts({
     registrar,
     vault,
@@ -74,7 +82,7 @@ describe("update_max_voter_weight!", () => {
       lockupSaturationSecs: new anchor.BN(86400),
     };
 
-    await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, authority, authority, votingConfig);
+    await createRegistrar(bump, maxVoterWeightRecordBump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, authority, authority, votingConfig);
 
     // mint some tokens
     const tokenSupply = new anchor.BN(1e10); // 10000

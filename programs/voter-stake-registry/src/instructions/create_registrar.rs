@@ -1,3 +1,4 @@
+use crate::circuit_breaker::WindowedCircuitBreakerConfigV0;
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
@@ -9,7 +10,6 @@ use circuit_breaker::cpi::accounts::InitializeAccountWindowedBreakerV0;
 use circuit_breaker::cpi::initialize_account_windowed_breaker_v0;
 use circuit_breaker::CircuitBreaker;
 use circuit_breaker::InitializeAccountWindowedBreakerArgsV0;
-use circuit_breaker::WindowedCircuitBreakerConfigV0;
 use spl_governance::state::realm;
 use std::mem::size_of;
 
@@ -83,9 +83,10 @@ pub struct CreateRegistrar<'info> {
 pub fn create_registrar(
     ctx: Context<CreateRegistrar>,
     registrar_bump: u8,
+    max_voter_weight_record_bump: u8,
     voting_config: VotingConfig,
     deposit_config: DepositConfig,
-    circuit_breaker_threshold: u64,
+    circuit_breaker_config: WindowedCircuitBreakerConfigV0,
 ) -> Result<()> {
     require!(
         voting_config.lockup_saturation_secs > 0,
@@ -112,6 +113,7 @@ pub fn create_registrar(
     );
 
     require_eq!(registrar_bump, ctx.bumps.registrar);
+    require_eq!(max_voter_weight_record_bump, ctx.bumps.max_voter_weight_record);
 
     // Initialize circuit breaker
     initialize_account_windowed_breaker_v0(
@@ -134,18 +136,14 @@ pub fn create_registrar(
         ),
         InitializeAccountWindowedBreakerArgsV0 {
             authority: ctx.accounts.realm_authority.key(),
-            config: WindowedCircuitBreakerConfigV0 {
-                window_size_seconds: SECS_PER_DAY,
-                threshold_type: circuit_breaker::ThresholdType::Absolute,
-                threshold: circuit_breaker_threshold,
-            },
+            config: circuit_breaker_config.into(),
             owner: ctx.accounts.registrar.key(),
         },
     )?;
 
     let registrar = &mut ctx.accounts.registrar.load_init()?;
     registrar.bump = registrar_bump;
-    registrar.max_voter_weight_record_bump = ctx.bumps.max_voter_weight_record;
+    registrar.max_voter_weight_record_bump = max_voter_weight_record_bump;
     registrar.governance_program_id = ctx.accounts.governance_program_id.key();
     registrar.realm = ctx.accounts.realm.key();
     registrar.governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
