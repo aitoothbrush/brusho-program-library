@@ -119,7 +119,7 @@ describe("rewards!", () => {
         const depositEntryIndex = 3;
         await deposit(depositEntryIndex, lockupDayily(15));
 
-        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         let prevRewardAccrualTs = registrarData.rewardAccrualTs;
         let prevRewardIndex = registrarData.rewardIndex;
 
@@ -163,19 +163,19 @@ describe("rewards!", () => {
             }).signers([voterAuthority])
             .rpc({ commitment: "confirmed" });
 
-        let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+        let voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
         assert.isTrue(voterData.rewardClaimableAmount.eqn(0));
 
         // verify registrar data
-        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         let tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' });
         let txTime = registrarData.timeOffset.add(new anchor.BN(tx!.blockTime!.toString()));
         assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
-        assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+        assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
 
-        let rewardIndexDelta = registrarData.currentRewardAmountPerSecond.v.mul(registrarData.rewardAccrualTs.sub(prevRewardAccrualTs))
+        let rewardIndexDelta = registrarData.currentRewardAmountPerSecond.mul(registrarData.rewardAccrualTs.sub(prevRewardAccrualTs))
             .div(anchor.BN.max(registrarData.permanentlyLockedAmount, FULL_REWARD_PERMANENTLY_LOCKED_FLOOR))
-        assert.equal(registrarData.rewardIndex.v.toString(), prevRewardIndex.v.add(rewardIndexDelta).toString());
+        assert.equal(registrarData.rewardIndex.toString(), prevRewardIndex.add(rewardIndexDelta).toString());
 
         let destinationTokenAccountData = await getTokenAccount(destinationTokenAccount);
         let expectRewardAmount = rewardIndexDelta.mul(depositAmount).div(EXP_SCALE);
@@ -183,7 +183,7 @@ describe("rewards!", () => {
     });
 
     it("claim_reward_later_again_should_work", async () => {
-        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         let prevRewardAccrualTs = registrarData.rewardAccrualTs;
         let prevRewardIndex = registrarData.rewardIndex;
 
@@ -205,19 +205,19 @@ describe("rewards!", () => {
             }).signers([voterAuthority])
             .rpc({ commitment: "confirmed" });
 
-        let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+        let voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
         assert.isTrue(voterData.rewardClaimableAmount.eqn(0));
 
         // verify registrar data
-        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         let tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' });
         let txTime = registrarData.timeOffset.add(new anchor.BN(tx!.blockTime!.toString()));
         assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
-        assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+        assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
 
-        let rewardIndexDelta = registrarData.currentRewardAmountPerSecond.v.mul(registrarData.rewardAccrualTs.sub(prevRewardAccrualTs))
+        let rewardIndexDelta = registrarData.currentRewardAmountPerSecond.mul(registrarData.rewardAccrualTs.sub(prevRewardAccrualTs))
             .div(anchor.BN.max(registrarData.permanentlyLockedAmount, FULL_REWARD_PERMANENTLY_LOCKED_FLOOR))
-        assert.equal(registrarData.rewardIndex.v.toString(), prevRewardIndex.v.add(rewardIndexDelta).toString());
+        assert.equal(registrarData.rewardIndex.toString(), prevRewardIndex.add(rewardIndexDelta).toString());
 
         let destinationTokenAccountData = await getTokenAccount(destinationTokenAccount);
         let expectRewardAmount = rewardIndexDelta.mul(depositAmount).div(EXP_SCALE);
@@ -227,9 +227,9 @@ describe("rewards!", () => {
     it("create_new_voter", async () => {
         let [voterAuthority, voter, voterWeightRecord, vault, tokenOwnerRecord] = await createVoter(realm, mint, registrar, authority);
 
-        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
-        let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
-        assert.equal(voterData.rewardIndex.v.toString(), registrarData.rewardIndex.v.toString())
+        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
+        let voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
+        assert.equal(voterData.rewardIndex.toString(), registrarData.rewardIndex.toString())
     });
 
     it("exceeds_circuit_breaker_threshold", async () => {
@@ -240,7 +240,7 @@ describe("rewards!", () => {
         const depositEntryIndex = 3;
         await deposit(depositEntryIndex, lockupDayily(15));
 
-        const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+        const voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
         assert.isTrue(voterData.rewardClaimableAmount.gt(circuitBreakerThreshold));
 
         const destinationTokenAccount = await newTokenAccount(mint, await newSigner());
@@ -272,34 +272,34 @@ describe("rewards!", () => {
         const depositEntryIndex = 3;
         let txId = await deposit(depositEntryIndex, lockupDayily(15));
         let tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' });
-        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
 
         let txTime = registrarData.timeOffset.add(new anchor.BN(tx!.blockTime!.toString()));
 
         let expectCurrentRewardAmountPerSecond = TOTAL_REWARD_AMOUNT.sub(registrarData.issuedRewardAmount).muln(12).divn(100).mul(EXP_SCALE).div(SECS_PER_YEAR);
         assert.equal(registrarData.lastRewardAmountPerSecondRotatedTs.toString(), txTime.toString())
-        assert.equal(registrarData.currentRewardAmountPerSecond.v.toString(), expectCurrentRewardAmountPerSecond.toString())
+        assert.equal(registrarData.currentRewardAmountPerSecond.toString(), expectCurrentRewardAmountPerSecond.toString())
 
         // fastup half year
         await fastup(registrar, authority, SECS_PER_YEAR.divn(2), "confirmed");
 
         // Trigger rotation
         await deposit(depositEntryIndex, lockupDayily(15));
-        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         assert.equal(registrarData.lastRewardAmountPerSecondRotatedTs.toString(), txTime.toString()) // not changed
-        assert.equal(registrarData.currentRewardAmountPerSecond.v.toString(), expectCurrentRewardAmountPerSecond.toString()) // not changed
+        assert.equal(registrarData.currentRewardAmountPerSecond.toString(), expectCurrentRewardAmountPerSecond.toString()) // not changed
 
         // fastup half year
         await fastup(registrar, authority, SECS_PER_YEAR.divn(2), "confirmed");
 
         // Trigger rotation
         txId = await deposit(depositEntryIndex, lockupDayily(15));
-        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
+        registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
         tx = await CONNECTION.getTransaction(txId, { commitment: 'confirmed' });
         txTime = registrarData.timeOffset.add(new anchor.BN(tx!.blockTime!.toString()));
 
         expectCurrentRewardAmountPerSecond = TOTAL_REWARD_AMOUNT.sub(registrarData.issuedRewardAmount).muln(12).divn(100).mul(EXP_SCALE).div(SECS_PER_YEAR);
-        assert.equal(registrarData.lastRewardAmountPerSecondRotatedTs.toString(), txTime.toString()) // not changed
-        assert.equal(registrarData.currentRewardAmountPerSecond.v.toString(), expectCurrentRewardAmountPerSecond.toString()) // not changed
+        assert.equal(registrarData.lastRewardAmountPerSecondRotatedTs.toString(), txTime.toString()) // changed
+        assert.equal(registrarData.currentRewardAmountPerSecond.toString(), expectCurrentRewardAmountPerSecond.toString()) // changed
     });
 });

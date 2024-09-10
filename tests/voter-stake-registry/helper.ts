@@ -296,12 +296,8 @@ export function defaultDepositConfig() {
   };
 }
 
-export type LockupTimeDuration = { periods: number, unit: { day: {} } | { month: {} } };
-export function newLockupTimeDuration(periods: number, unit: 'day' | 'month'): LockupTimeDuration {
-  if (periods < 0) {
-    throw `illegal periods ${periods}`;
-  }
-
+export type LockupTimeDuration = { periods: anchor.BN, unit: { day: {} } | { month: {} }, filler: number[] };
+export function newLockupTimeDuration(periods: anchor.BN, unit: 'day' | 'month'): LockupTimeDuration {
   let _unit;
   if (unit === 'day') {
     _unit = { day: {} };
@@ -311,22 +307,23 @@ export function newLockupTimeDuration(periods: number, unit: 'day' | 'month'): L
 
   return {
     periods: periods,
-    unit: _unit
+    unit: _unit,
+    filler: [0, 0, 0, 0, 0, 0, 0]
   };
 }
 
 export function lockupDayily(periods: number): LockupTimeDuration {
-  return newLockupTimeDuration(periods, 'day');
+  return newLockupTimeDuration(new anchor.BN(periods), 'day');
 }
 
 export function lockupMonthly(periods: number): LockupTimeDuration {
-  return newLockupTimeDuration(periods, 'month');
+  return newLockupTimeDuration(new anchor.BN(periods), 'month');
 }
 
 export function lockupTimeDurationSeconds(lockupTimeDuration: LockupTimeDuration): anchor.BN {
   if ((lockupTimeDuration.unit as any).day != undefined) {
-    return SECS_PER_DAY.muln(lockupTimeDuration.periods);
+    return SECS_PER_DAY.mul(lockupTimeDuration.periods);
   } else {
-    return SECS_PER_MONTH.muln(lockupTimeDuration.periods);
+    return SECS_PER_MONTH.mul(lockupTimeDuration.periods);
   }
 }

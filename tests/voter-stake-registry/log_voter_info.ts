@@ -3,6 +3,7 @@ import { web3 } from "@coral-xyz/anchor";
 
 import { createRealm, createRegistrar, createVoter, defaultDepositConfig, defaultVotingConfig, fastup, lockupDayily, lockupMonthly, LockupTimeDuration, lockupTimeDurationSeconds, mintTokenToAccount, newSigner, newTokenAccount, VSR_PROGRAM } from "./helper";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { assert } from "chai";
 
 
 describe("log_voter_info!", () => {
@@ -94,7 +95,7 @@ describe("log_voter_info!", () => {
     // deposit at index 3
     await ordinaryDeposit(3, lockupMonthly(3), new anchor.BN(1e10));
 
-    // release deposit at index 3
+    // release deposit at index 4
     await VSR_PROGRAM.methods
       .ordinaryReleaseDeposit(3, 4, new anchor.BN(1e9))
       .accounts({
@@ -119,5 +120,10 @@ describe("log_voter_info!", () => {
 
     // console.log(JSON.stringify(response, undefined, 2))
     const voterInfoData = response.events[0].data;
+    assert.isTrue(voterInfoData.depositEntries[0] != null)
+    assert.isTrue(voterInfoData.depositEntries[1] != null)
+    assert.isTrue(voterInfoData.depositEntries[2] != null)
+    assert.isTrue(voterInfoData.depositEntries[3] != null)
+    assert.isTrue(voterInfoData.depositEntries[4] != null)
   });
 });

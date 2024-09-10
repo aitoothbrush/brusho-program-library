@@ -4,20 +4,20 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct LogVoterInfo<'info> {
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     #[account(
-        constraint = voter.get_registrar() == registrar.key()
+        constraint = voter.load()?.get_registrar() == registrar.key()
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 }
 
 /// A no-effect instruction that logs information about the voter and deposits.
 pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
-    let registrar = &ctx.accounts.registrar;
-    let voter = &ctx.accounts.voter;
-    let curr_ts = registrar.clock_unix_timestamp();
+    let registrar = &ctx.accounts.registrar.load()?;
+    let voter = &ctx.accounts.voter.load()?;
 
+    let curr_ts = registrar.clock_unix_timestamp();
     let mut deposit_entries: [Option<DepositEntryInfo>; 10] = Default::default();
     for (index, d_entry) in voter.get_deposits().iter().enumerate() {
         if d_entry.is_active() {
@@ -30,7 +30,7 @@ pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
             let voting_power_baseline = registrar
                 .voting_config
                 .baseline_vote_weight(d_entry.get_amount_deposited_native())?;
-            let vesting = lockup.kind().is_vesting().then(|| VestingInfo {
+            let vesting = lockup.kind.is_vesting().then(|| VestingInfo {
                 rate: d_entry
                     .get_amount_initially_locked_native()
                     .checked_div(periods_total)
@@ -38,7 +38,7 @@ pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
                 next_timestamp: (d_entry.get_lockup().end_ts() as u64).saturating_sub(
                     periods_left
                         .saturating_sub(1)
-                        .checked_mul(lockup.kind().period_secs())
+                        .checked_mul(lockup.kind.period_secs())
                         .unwrap(),
                 ),
             });
@@ -58,13 +58,13 @@ pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
     let reward_index_delta = if registrar.permanently_locked_amount != 0 {
         registrar
             .current_reward_amount_per_second
-            .mul_scalar(seconds_delta as u128)
+            .mul_scalar(seconds_delta as core::primitive::u128)
             .div_scalar(u64::max(
                 registrar.permanently_locked_amount,
                 FULL_REWARD_PERMANENTLY_LOCKED_FLOOR,
-            ) as u128)
+            ) as core::primitive::u128)
     } else {
-        Exponential::new(0)
+        u128::new(0)
     };
 
     let reward_amount = voter
@@ -72,9 +72,9 @@ pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
         .checked_add(
             registrar
                 .reward_index
-                .add_exp(reward_index_delta)
-                .sub_exp(voter.get_reward_index())
-                .mul_scalar(voter.permanently_locked(curr_ts)? as u128)
+                .add(reward_index_delta)
+                .sub(voter.get_reward_index())
+                .mul_scalar(voter.permanently_locked(curr_ts)? as core::primitive::u128)
                 .truncate() as u64,
         )
         .unwrap();

@@ -8,18 +8,18 @@ use anchor_spl::token::{self, CloseAccount, Token, TokenAccount};
 // can then be sent back to the sol_destination
 #[derive(Accounts)]
 pub struct CloseVoter<'info> {
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
-        seeds = [voter.get_registrar().key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = voter_authority.key() == voter.get_voter_authority(),
+        seeds = [voter.load()?.get_registrar().key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
+        bump = voter.load()?.get_voter_bump(),
+        constraint = voter_authority.key() == voter.load()?.get_voter_authority(),
         close = sol_destination
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 
     pub voter_authority: Signer<'info>,
 
@@ -35,13 +35,12 @@ pub struct CloseVoter<'info> {
 /// Only accounts with no remaining deposits can be closed.
 pub fn close_voter<'info>(ctx: Context<'_, '_, 'info, 'info, CloseVoter<'info>>) -> Result<()> {
     {
-        let voter = &ctx.accounts.voter;
+        let voter = &ctx.accounts.voter.load()?;
+
         let amount = voter.amount_deposited_native();
         require_eq!(amount, 0, VsrError::GoverningTokenNonZero);
         require_eq!(voter.get_reward_claimable_amount(), 0, VsrError::GoverningTokenNonZero);
 
-        // let voter_seeds = voter_seeds!(voter);
-        // let voter_seeds =
         for account in ctx.remaining_accounts.iter() {
             let token = Account::<TokenAccount>::try_from(account).unwrap();
             require_keys_eq!(

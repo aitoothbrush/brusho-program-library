@@ -8,22 +8,22 @@ pub const NODE_DEPOSIT_ENTRY_INDEX: u8 = 0;
 #[derive(Accounts)]
 pub struct NodeDeposit<'info> {
     #[account(mut)]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
-        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.get_voter_authority().key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = voter.get_registrar() == registrar.key()
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.get_voter_authority().key().as_ref()],
+        bump = voter.load()?.get_voter_bump(),
+        constraint = voter.load()?.get_registrar() == registrar.key()
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 
     #[account(
         mut,
         associated_token::authority = voter,
-        associated_token::mint = registrar.governing_token_mint,
+        associated_token::mint = registrar.load()?.governing_token_mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
@@ -50,20 +50,20 @@ impl<'info> NodeDeposit<'info> {
     }
 }
 
-/// Adds tokens to a ordinary deposit entry.
+/// Deposit tokens and become a node.
 ///
 /// Tokens will be transfered from deposit_token to vault using the deposit_authority.
 pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
     {
-        let registrar = &ctx.accounts.registrar;
+        let registrar = &ctx.accounts.registrar.load()?;
         let node_security_deposit = registrar.deposit_config.node_security_deposit;
 
         // Deposit tokens into the vault
         token::transfer(ctx.accounts.transfer_ctx(), node_security_deposit)?;
     }
 
-    let registrar = &mut ctx.accounts.registrar;
-    let voter = &mut ctx.accounts.voter;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
+    let voter = &mut ctx.accounts.voter.load_mut()?;
     require!(
         !(voter.is_active(NODE_DEPOSIT_ENTRY_INDEX)?),
         VsrError::DuplicateNodeDeposit
@@ -78,7 +78,7 @@ pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
         NODE_DEPOSIT_ENTRY_INDEX,
         curr_ts,
         Lockup::new_from_kind(
-            LockupKind::Constant(registrar.deposit_config.node_deposit_lockup_duration),
+            LockupKind::constant(registrar.deposit_config.node_deposit_lockup_duration),
             curr_ts,
             curr_ts,
         )?,

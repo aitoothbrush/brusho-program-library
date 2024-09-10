@@ -217,21 +217,21 @@ describe("ordinary_release_deposit!", () => {
     const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     const originDepositEntry = voterData.deposits.at(depositEntryIndex);
     // console.log(JSON.stringify(originDepositEntry, undefined, 2))
-    assert.isTrue(originDepositEntry.isActive)
+    assert.isTrue(originDepositEntry.isActive == 1)
     assert.isTrue(originDepositEntry.amountDepositedNative.eq(depositAmount.sub(releaseAmount)))
     assert.isTrue(originDepositEntry.amountInitiallyLockedNative.eq(depositAmount.sub(releaseAmount)))
     // assert lockup kind remains unchanged 
-    assert.isTrue(originDepositEntry.lockup.kind.constant != undefined) // assert lockup kind is constant
-    assert.equal(originDepositEntry.lockup.kind.constant![0].periods, 15) // assert periods of lockup time duration is 15
-    assert.isTrue((originDepositEntry.lockup.kind.constant![0].unit as any).day != undefined) // assert unit of lockup time duration is Day
+    assert.isTrue(originDepositEntry.lockup.kind.duration != undefined) // assert lockup kind is constant
+    assert.equal(originDepositEntry.lockup.kind.duration.periods.toNumber(), 15) // assert periods of lockup time duration is 15
+    assert.isTrue((originDepositEntry.lockup.kind.duration.unit as any).day != undefined) // assert unit of lockup time duration is Day
 
     const targetDepositEntry = voterData.deposits.at(targetDepositEntryIndex);
     // console.log(JSON.stringify(targetDepositEntry, undefined, 2))
-    assert.isTrue(targetDepositEntry.isActive)
+    assert.isTrue(targetDepositEntry.isActive == 1)
     assert.isTrue(targetDepositEntry.amountDepositedNative.eq(releaseAmount))
     assert.isTrue(targetDepositEntry.amountInitiallyLockedNative.eq(releaseAmount))
-    assert.isTrue(targetDepositEntry.lockup.kind.daily != undefined) // assert lockup kind is daily
-    assert.equal(targetDepositEntry.lockup.kind.daily![0], 15) // assert periods of lockup time duration is 15
+    assert.isTrue(targetDepositEntry.lockup.kind.kind.daily != undefined) // assert lockup kind is daily
+    assert.equal(targetDepositEntry.lockup.kind.duration.periods.toNumber(), 15) // assert periods of lockup time duration is 15
 
     // verify registrar data
     registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
@@ -239,7 +239,7 @@ describe("ordinary_release_deposit!", () => {
     const txTime = registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString()));
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
     assert.equal(registrarData.permanentlyLockedAmount.toString(), prevPermanentlyLockedAmount.sub(releaseAmount).toString());
-    assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+    assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
   });
 
   it("verify_ordinary_release_deposit_all", async () => {
@@ -258,12 +258,12 @@ describe("ordinary_release_deposit!", () => {
     const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     const depositEntry = voterData.deposits.at(depositEntryIndex);
     // console.log(JSON.stringify(originDepositEntry, undefined, 2))
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
     assert.isTrue(depositEntry.amountDepositedNative.eq(depositAmount))
     assert.isTrue(depositEntry.amountInitiallyLockedNative.eq(depositAmount))
     // assert lockup kind remains unchanged 
-    assert.isTrue(depositEntry.lockup.kind.daily != undefined) // assert lockup kind is daily
-    assert.equal(depositEntry.lockup.kind.daily![0], 15) // assert periods of lockup time duration is 15
+    assert.isTrue(depositEntry.lockup.kind.kind.daily != undefined) // assert lockup kind is daily
+    assert.equal(depositEntry.lockup.kind.duration.periods.toNumber(), 15) // assert periods of lockup time duration is 15
   });
 
   it("with_non_constant_deposit_entry_should_fail", async () => {

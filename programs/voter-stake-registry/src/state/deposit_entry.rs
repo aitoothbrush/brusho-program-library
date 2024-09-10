@@ -5,9 +5,13 @@ use anchor_lang::prelude::*;
 use std::cmp::min;
 use std::convert::TryFrom;
 
+const ACTIVE_FLAG: u8 = 1;
+const INACTIVE_FLAG: u8 = 0;
 
 /// Bookkeeping for a single deposit for a given mint and lockup schedule.
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy, PartialEq)]
+// #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+#[zero_copy]
+#[derive(Default)]
 pub struct DepositEntry {
     // Locked state.
     lockup: Lockup,
@@ -30,11 +34,12 @@ pub struct DepositEntry {
     amount_initially_locked_native: u64,
 
     // True if the deposit entry is being active.
-    is_active: bool,
+    is_active: u8,
 
-    reserved: [u8; 23],
+    reserved1: [u8; 7],
+    reserved2: [u64; 4],
 }
-const_assert!(std::mem::size_of::<DepositEntry>() == 16 + 2 * 8 + 1 + 23);
+const_assert!(std::mem::size_of::<DepositEntry>() == 32 + 2 * 8 + 1 + 7 + 4 * 8);
 const_assert!(std::mem::size_of::<DepositEntry>() % 8 == 0);
 
 /// impl: factory function and getters
@@ -44,8 +49,9 @@ impl DepositEntry {
             lockup,
             amount_deposited_native: 0,
             amount_initially_locked_native: 0,
-            is_active: true,
-            reserved: [0; 23],
+            is_active: ACTIVE_FLAG,
+            reserved1: [0; 7],
+            reserved2: [0; 4],
         })
     }
 
@@ -69,22 +75,22 @@ impl DepositEntry {
 impl DepositEntry {
     #[inline(always)]
     pub fn is_active(&self) -> bool {
-        self.is_active
+        self.is_active == ACTIVE_FLAG
     }
 
     /// Caution: this is a dangerous operation
     pub fn deactivate(&mut self) -> Result<()> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         self.lockup = Lockup::default();
         self.amount_deposited_native = 0;
         self.amount_initially_locked_native = 0;
-        self.is_active = false;
+        self.is_active = INACTIVE_FLAG;
         Ok(())
     }
 
     pub fn deposit(&mut self, curr_ts: i64, amount: u64) -> Result<()> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         let vested_amount = self.vested(curr_ts)?;
         // Deduct vested amount from amount_initially_locked_native
@@ -106,14 +112,14 @@ impl DepositEntry {
             .unwrap();
 
         // Reset lockup
-        if self.lockup.start_ts() < curr_ts {
-            self.lockup = Lockup::new_from_kind(self.lockup.kind(), curr_ts, curr_ts)?;
+        if self.lockup.start_ts < curr_ts {
+            self.lockup = Lockup::new_from_kind(self.lockup.kind, curr_ts, curr_ts)?;
         }
         Ok(())
     }
 
     pub fn withdraw(&mut self, curr_ts: i64, amount: u64) -> Result<()> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         let amount_unlocked = self.amount_unlocked(curr_ts)?;
         require_gte!(
@@ -167,7 +173,7 @@ impl DepositEntry {
     /// voting_power_linear_vesting() below.
     ///
     pub fn voting_power(&self, voting_config: &VotingConfig, curr_ts: i64) -> Result<u64> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         let baseline_vote_weight =
             voting_config.baseline_vote_weight(self.amount_deposited_native)?;
@@ -195,12 +201,12 @@ impl DepositEntry {
         max_locked_vote_weight: u64,
         lockup_saturation_secs: u64,
     ) -> Result<u64> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         if self.lockup.expired(curr_ts) || max_locked_vote_weight == 0 {
             return Ok(0);
         }
-        if self.lockup.kind().is_vesting() {
+        if self.lockup.kind.is_vesting() {
             self.voting_power_linear_vesting(
                 curr_ts,
                 max_locked_vote_weight,
@@ -238,7 +244,7 @@ impl DepositEntry {
     ) -> Result<u64> {
         let periods_left = self.lockup.periods_left(curr_ts)?;
         let periods_total = self.lockup.periods_total();
-        let period_secs = self.lockup.kind().period_secs();
+        let period_secs = self.lockup.kind.period_secs();
 
         if periods_left == 0 {
             return Ok(0);
@@ -342,12 +348,12 @@ impl DepositEntry {
     /// Returns the amount of unlocked tokens for this deposit--in native units
     /// of the original token amount (not scaled by the exchange rate).
     pub fn vested(&self, curr_ts: i64) -> Result<u64> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         if self.lockup.expired(curr_ts) {
             return Ok(self.amount_initially_locked_native);
         }
-        if self.lockup.kind().is_vesting() {
+        if self.lockup.kind.is_vesting() {
             self.vested_linearly(curr_ts)
         } else {
             Ok(0)
@@ -375,7 +381,7 @@ impl DepositEntry {
     /// Returns native tokens still locked.
     #[inline(always)]
     pub fn amount_locked(&self, curr_ts: i64) -> Result<u64> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         Ok(self.amount_initially_locked_native
             .checked_sub(self.vested(curr_ts).unwrap())
@@ -386,7 +392,7 @@ impl DepositEntry {
     /// and previous withdraws.
     #[inline(always)]
     pub fn amount_unlocked(&self, curr_ts: i64) -> Result<u64> {
-        require!(self.is_active, VsrError::InternalProgramError);
+        require!(self.is_active(), VsrError::InternalProgramError);
 
         Ok(self.amount_deposited_native
             .checked_sub(self.amount_locked(curr_ts)?)
@@ -397,11 +403,11 @@ impl DepositEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{LockupKind::*, *};
+    use crate::*;
 
     #[test]
     pub fn deactivate_test() -> Result<()> {
-        let lockup = Lockup::new_from_kind(Daily(2), 0, 1)?;
+        let lockup = Lockup::new_from_kind(LockupKind::daily(2), 0, 1)?;
         let mut entry = DepositEntry::new_from_lockup(lockup)?;
 
         assert!(entry.deactivate().is_ok());
@@ -415,7 +421,7 @@ mod tests {
     pub fn deposit_test() -> Result<()> {
         let day: i64 = i64::try_from(LockupTimeUnit::Day.seconds()).unwrap();
         let lockup_start = 1; // arbitrary point
-        let lockup_kind = Daily(4);
+        let lockup_kind = LockupKind::daily(4);
         let lockup = Lockup::new_from_kind(lockup_kind, 0, lockup_start)?;
         let mut entry = DepositEntry::new_from_lockup(lockup)?;
 
@@ -424,21 +430,19 @@ mod tests {
 
         assert_eq!(entry.amount_deposited_native, 10_000);
         assert_eq!(entry.amount_initially_locked_native, 10_000);
-        assert_eq!(entry.lockup, lockup);
+        assert_eq!(entry.lockup.start_ts, lockup.start_ts);
 
         // deposit at time 1
         entry.deposit(1, 10_000)?;
         assert_eq!(entry.amount_deposited_native, 20_000);
         assert_eq!(entry.amount_initially_locked_native, 20_000);
-        assert_eq!(entry.lockup, lockup);
+        assert_eq!(entry.lockup.start_ts, lockup.start_ts);
 
         // deposit at lock_start + day
         entry.deposit(lockup_start + day, 10_000)?;
         assert_eq!(entry.amount_deposited_native, 30_000);
         assert_eq!(entry.amount_initially_locked_native, 25_000);
-        assert_ne!(entry.lockup, lockup);
-        assert_eq!(entry.lockup.kind(), lockup_kind);
-        assert_eq!(entry.lockup.start_ts(), lockup_start + day);
+        assert_eq!(entry.lockup.start_ts, lockup_start + day);
 
         // deactivate, then deposit again
         entry.deactivate()?;
@@ -454,7 +458,7 @@ mod tests {
         let day: i64 = i64::try_from(LockupTimeUnit::Day.seconds()).unwrap();
         let saturation: i64 = 5 * day;
         let lockup_start = 10_000_000_000; // arbitrary point
-        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(Daily(2), lockup_start, lockup_start)?)?;
+        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(LockupKind::daily(2), lockup_start, lockup_start)?)?;
         entry.deposit(lockup_start, 10_000)?;
         let voting_mint_config = VotingConfig {
             baseline_vote_weight_scaled_factor: 1_000_000_000, // 1x
@@ -507,7 +511,7 @@ mod tests {
     pub fn daily_vested_test() -> Result<()> {
         let day: i64 = i64::try_from(LockupTimeUnit::Day.seconds()).unwrap();
         let lockup_start = 1; // arbitrary point
-        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(Daily(2), 0, lockup_start)?)?;
+        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(LockupKind::daily(2), 0, lockup_start)?)?;
         entry.deposit(lockup_start, 10_000)?;
 
         let mut vested = entry.vested(lockup_start - 1)?;
@@ -559,7 +563,7 @@ mod tests {
     pub fn monthly_vested_test() -> Result<()> {
         let month: i64 = i64::try_from(LockupTimeUnit::Month.seconds()).unwrap();
         let lockup_start = 1; // arbitrary point
-        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(Monthly(2), 0, lockup_start)?)?;
+        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(LockupKind::monthly(2), 0, lockup_start)?)?;
         entry.deposit(lockup_start, 10_000)?;
 
         let mut vested = entry.vested(lockup_start - 1)?;
@@ -611,7 +615,7 @@ mod tests {
     pub fn constant_vested_test() -> Result<()> {
         let month: i64 = i64::try_from(LockupTimeUnit::Month.seconds()).unwrap();
         let lockup_start = 1; // arbitrary point
-        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(Constant(LockupTimeDuration{periods: 1, unit: LockupTimeUnit::Month}), 0, lockup_start)?)?;
+        let mut entry = DepositEntry::new_from_lockup(Lockup::new_from_kind(LockupKind::constant(LockupTimeDuration{periods: 1, unit: LockupTimeUnit::Month, filler: [0; 7]}), 0, lockup_start)?)?;
         entry.deposit(lockup_start, 10_000)?;
 
         let mut vested = entry.vested(lockup_start - 1)?;
@@ -642,7 +646,7 @@ mod tests {
     pub fn withdraw_test() -> Result<()> {
         let day: i64 = i64::try_from(LockupTimeUnit::Day.seconds()).unwrap();
         let lockup_start = 0; // arbitrary point
-        let lockup_kind = Daily(4);
+        let lockup_kind = LockupKind::daily(4);
         let lockup = Lockup::new_from_kind(lockup_kind, lockup_start, lockup_start)?;
 
         let mut entry = DepositEntry::new_from_lockup(lockup)?;
@@ -656,14 +660,12 @@ mod tests {
         assert_eq!(entry.amount_deposited_native, 9000);
         assert_eq!(entry.amount_initially_locked_native, 10_000);
         assert_eq!(entry.amount_unlocked(withdraw_at)?, 1_500);
-        assert_eq!(entry.lockup, lockup);
 
         // Second withdrawal: amount 1000
         entry.withdraw(withdraw_at, 1_000)?;
         assert_eq!(entry.amount_deposited_native, 8000);
         assert_eq!(entry.amount_initially_locked_native, 10_000);
         assert_eq!(entry.amount_unlocked(withdraw_at)?, 500);
-        assert_eq!(entry.lockup, lockup);
 
         // Third withdrawal: amount 1000
         assert_eq!(entry.withdraw(withdraw_at, 1_000), Err(error!(VsrError::InsufficientUnlockedTokens)) as Result<()>);
@@ -673,7 +675,6 @@ mod tests {
         assert_eq!(entry.amount_deposited_native, 7500);
         assert_eq!(entry.amount_initially_locked_native, 10_000);
         assert_eq!(entry.amount_unlocked(withdraw_at)?, 0);
-        assert_eq!(entry.lockup, lockup);
 
         // Withdrawal after deactivate
         entry.deactivate()?;

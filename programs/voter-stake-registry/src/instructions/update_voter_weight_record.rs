@@ -3,24 +3,24 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct UpdateVoterWeightRecord<'info> {
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
-        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.get_voter_authority().key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = registrar.key() == voter.get_registrar(),
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.get_voter_authority().key().as_ref()],
+        bump = voter.load()?.get_voter_bump(),
+        constraint = registrar.key() == voter.load()?.get_registrar(),
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 
     #[account(
         mut,
-        seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter.get_voter_authority().key().as_ref()],
-        bump = voter.get_voter_weight_record_bump(),
-        constraint = voter_weight_record.realm == registrar.realm,
-        constraint = voter_weight_record.governing_token_owner == voter.get_voter_authority(),
-        constraint = voter_weight_record.governing_token_mint == registrar.governing_token_mint,
+        seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter.load()?.get_voter_authority().key().as_ref()],
+        bump = voter.load()?.get_voter_weight_record_bump(),
+        constraint = voter_weight_record.realm == registrar.load()?.realm,
+        constraint = voter_weight_record.governing_token_owner == voter.load()?.get_voter_authority(),
+        constraint = voter_weight_record.governing_token_mint == registrar.load()?.governing_token_mint,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
 
@@ -34,8 +34,8 @@ pub struct UpdateVoterWeightRecord<'info> {
 /// This "revise" instruction must be called immediately before voting, in
 /// the same transaction.
 pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
-    let registrar = &ctx.accounts.registrar;
-    let voter = &ctx.accounts.voter;
+    let registrar = &ctx.accounts.registrar.load()?;
+    let voter = &ctx.accounts.voter.load()?;
     let record = &mut ctx.accounts.voter_weight_record;
     let curr_ts = registrar.clock_unix_timestamp();
     record.voter_weight = voter.weight(curr_ts, registrar)?;

@@ -206,21 +206,21 @@ describe("node_release_deposit!", () => {
     const nodeDepositEntry = voterData.deposits.at(0);
 
     assert.isTrue(voterData.rewardClaimableAmount.gtn(0))
-    assert.isFalse(nodeDepositEntry.isActive)
+    assert.isTrue(nodeDepositEntry.isActive == 0)
 
     const targetDepositEntry = voterData.deposits.at(targetDepositEntryIndex);
     // console.log(JSON.stringify(targetDepositEntry, undefined, 2))
-    assert.isTrue(targetDepositEntry.isActive)
+    assert.isTrue(targetDepositEntry.isActive == 1)
     assert.isTrue(targetDepositEntry.amountDepositedNative.eq(nodeSecurityDeposit))
     assert.isTrue(targetDepositEntry.amountInitiallyLockedNative.eq(nodeSecurityDeposit))
-    assert.isTrue(targetDepositEntry.lockup.kind.monthly != undefined) // assert lockup kind is Monthly
-    assert.equal(targetDepositEntry.lockup.kind.monthly![0], 6) // assert periods of lockup time duration is 6
+    assert.isTrue(targetDepositEntry.lockup.kind.kind.monthly != undefined) // assert lockup kind is Monthly
+    assert.equal(targetDepositEntry.lockup.kind.duration.periods.toNumber(), 6) // assert periods of lockup time duration is 6
 
     // verify registrar data
     registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
     // console.log(JSON.stringify(registrarData, undefined, 2))
     assert.equal(registrarData.permanentlyLockedAmount.toString(), prevPermanentlyLockedAmount.sub(depositConfig.nodeSecurityDeposit).toString());
-    assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+    assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
     assert.equal(registrarData.rewardAccrualTs.toString(), registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString())).toString());
   });
 });

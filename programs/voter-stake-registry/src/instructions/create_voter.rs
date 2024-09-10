@@ -5,11 +5,12 @@ use anchor_spl::token::Mint;
 use anchor_spl::token::Token;
 use anchor_spl::token::TokenAccount;
 use std::mem::size_of;
+use std::ops::DerefMut;
 
 #[derive(Accounts)]
 pub struct CreateVoter<'info> {
     #[account(mut)]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
     pub governing_token_mint: Box<Account<'info, Mint>>,
 
     #[account(
@@ -19,7 +20,7 @@ pub struct CreateVoter<'info> {
         payer = payer,
         space = 8 + size_of::<Voter>(),
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 
     /// The authority controling the voter. Must be the same as the
     /// `governing_token_owner` in the token owner record used with
@@ -67,21 +68,21 @@ pub fn create_voter(
     require_eq!(voter_bump, ctx.bumps.voter);
     require_eq!(voter_weight_record_bump, ctx.bumps.voter_weight_record);
 
-    let registrar = &mut ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
     let voter_authority = ctx.accounts.voter_authority.key();
 
     // accrue rewards
     let curr_ts = registrar.clock_unix_timestamp();
     registrar.accrue_rewards(curr_ts);
 
-    let voter = &mut ctx.accounts.voter;
-    voter.set_inner(Voter::new(
+    let voter = &mut ctx.accounts.voter.load_init()?;
+    (*voter.deref_mut()) = Voter::new(
         voter_authority,
-        registrar.key(),
+        ctx.accounts.registrar.key(),
         registrar.reward_index,
         voter_bump,
         voter_weight_record_bump,
-    ));
+    );
 
     let voter_weight_record = &mut ctx.accounts.voter_weight_record;
     voter_weight_record.account_discriminator =

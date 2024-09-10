@@ -7,18 +7,18 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 pub struct NodeReleaseDeposit<'info> {
     #[account(mut)]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = voter.get_registrar() == registrar.key(),
-        constraint = voter.get_voter_authority() == voter_authority.key(),
+        bump = voter.load()?.get_voter_bump(),
+        constraint = voter.load()?.get_registrar() == registrar.key(),
+        constraint = voter.load()?.get_voter_authority() == voter_authority.key(),
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
 }
 
@@ -26,8 +26,8 @@ pub fn node_release_deposit(
     ctx: Context<NodeReleaseDeposit>,
     target_deposit_entry_index: u8,
 ) -> Result<()> {
-    let registrar = &mut ctx.accounts.registrar;
-    let voter = &mut ctx.accounts.voter;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
+    let voter = &mut ctx.accounts.voter.load_mut()?;
 
     let d_entry = voter.deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?;
     require!(d_entry.is_active(), VsrError::InactiveDepositEntry);
@@ -42,14 +42,15 @@ pub fn node_release_deposit(
 
     let node_security_deposit = d_entry.get_amount_deposited_native();
     let lockup = d_entry.get_lockup();
-    if let LockupKind::Constant(duration) = lockup.kind() {
+    let lockup_kind = lockup.kind;
+    if let LockupKindKind::Constant = lockup_kind.kind {
         if curr_ts < lockup.end_ts() {
             return Err(error!(VsrError::NodeDepositUnreleasableAtPresent));
         }
 
         voter.deactivate(NODE_DEPOSIT_ENTRY_INDEX, curr_ts, registrar)?;
 
-        let target_lockup = Lockup::new_from_duration(duration, curr_ts, curr_ts)?;
+        let target_lockup = Lockup::new_from_duration(lockup_kind.duration, curr_ts, curr_ts)?;
 
         voter.activate(
             target_deposit_entry_index,
