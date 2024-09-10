@@ -3,7 +3,6 @@ use anchor_lang::prelude::*;
 use crate::Lockup;
 
 #[event]
-#[derive(Debug)]
 pub struct NodeDepositEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -12,7 +11,6 @@ pub struct NodeDepositEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct NodeReleaseDepositEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -20,7 +18,6 @@ pub struct NodeReleaseDepositEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct OrdinaryDepositEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -30,7 +27,6 @@ pub struct OrdinaryDepositEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct OrdinaryReleaseDepositEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -40,7 +36,6 @@ pub struct OrdinaryReleaseDepositEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct WithdrawEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -49,7 +44,6 @@ pub struct WithdrawEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct ClaimRewardEvent {
     // voter authority address
     pub voter: Pubkey,
@@ -57,7 +51,6 @@ pub struct ClaimRewardEvent {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct VoterInfo {
     /// Voter's total voting power
     pub voting_power: u64,
@@ -69,7 +62,7 @@ pub struct VoterInfo {
     pub deposit_entries: [Option<DepositEntryInfo>; 10],
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct DepositEntryInfo {
     /// The lockup info 
     pub lockup: Lockup,
@@ -85,7 +78,7 @@ pub struct DepositEntryInfo {
     pub vesting: Option<VestingInfo>,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct VestingInfo {
     /// Amount of tokens vested each period
     pub rate: u64,

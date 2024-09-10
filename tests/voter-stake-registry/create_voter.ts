@@ -166,10 +166,10 @@ describe("create_voter!", () => {
     assert.equal(voterData.registrar.toBase58(), registrar.toBase58())
     assert.equal(voterData.voterBump, voterBump)
     assert.equal(voterData.voterWeightRecordBump, voterWeightRecordBump);
-    assert.equal(voterData.rewardIndex.v.toString(), registrarData.rewardIndex.v.toString())
+    assert.equal(voterData.rewardIndex.toString(), registrarData.rewardIndex.toString())
     assert.isTrue(voterData.rewardClaimableAmount.eqn(0));
     for (let e of voterData.deposits) {
-      assert.isFalse(e.isActive)
+      assert.equal(e.isActive, 0)
       assert.equal(e.amountDepositedNative.toString(), "0")
       assert.equal(e.amountInitiallyLockedNative.toString(), "0")
     }

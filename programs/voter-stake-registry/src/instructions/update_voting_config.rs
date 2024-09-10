@@ -10,7 +10,7 @@ pub struct UpdateVotingConfig<'info> {
         has_one = governing_token_mint,
         has_one = realm_authority,
     )]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
     pub governing_token_mint: Box<Account<'info, Mint>>,
 
     pub realm_authority: Signer<'info>,
@@ -26,7 +26,7 @@ pub fn update_voting_config(
         VsrError::LockupSaturationMustBePositive
     );
 
-    let registrar = &mut ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
     registrar.voting_config = voting_config;
 
     // Check for overflow in vote weight

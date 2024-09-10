@@ -24,7 +24,7 @@ pub struct CreateRegistrar<'info> {
         payer = payer,
         space = 8 + size_of::<Registrar>()
     )]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     #[account(
         init_if_needed,
@@ -111,9 +111,9 @@ pub fn create_registrar(
         VsrError::InvalidRealmAuthority
     );
 
-    let registrar = &mut ctx.accounts.registrar;
     require_eq!(registrar_bump, ctx.bumps.registrar);
 
+    // Initialize circuit breaker
     initialize_account_windowed_breaker_v0(
         CpiContext::new_with_signer(
             ctx.accounts.circuit_breaker_program.to_account_info(),
@@ -121,7 +121,7 @@ pub fn create_registrar(
                 payer: ctx.accounts.payer.to_account_info(),
                 circuit_breaker: ctx.accounts.circuit_breaker.to_account_info(),
                 token_account: ctx.accounts.vault.to_account_info(),
-                owner: registrar.to_account_info(),
+                owner: ctx.accounts.registrar.to_account_info(),
                 token_program: ctx.accounts.token_program.to_account_info(),
                 system_program: ctx.accounts.system_program.to_account_info(),
             },
@@ -139,10 +139,11 @@ pub fn create_registrar(
                 threshold_type: circuit_breaker::ThresholdType::Absolute,
                 threshold: circuit_breaker_threshold,
             },
-            owner: registrar.key(),
+            owner: ctx.accounts.registrar.key(),
         },
     )?;
 
+    let registrar = &mut ctx.accounts.registrar.load_init()?;
     registrar.bump = registrar_bump;
     registrar.max_voter_weight_record_bump = ctx.bumps.max_voter_weight_record;
     registrar.governance_program_id = ctx.accounts.governance_program_id.key();
@@ -151,10 +152,10 @@ pub fn create_registrar(
     registrar.realm_authority = ctx.accounts.realm_authority.key();
     registrar.voting_config = voting_config;
     registrar.deposit_config = deposit_config;
-    registrar.current_reward_amount_per_second = Exponential::new(0);
+    registrar.current_reward_amount_per_second = u128::new(0);
     registrar.last_reward_amount_per_second_rotated_ts = 0;
     registrar.reward_accrual_ts = 0;
-    registrar.reward_index = Exponential::new(0);
+    registrar.reward_index = u128::new(0);
     registrar.issued_reward_amount = 0;
     registrar.permanently_locked_amount = 0;
     registrar.time_offset = 0;

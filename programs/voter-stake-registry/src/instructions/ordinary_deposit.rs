@@ -5,22 +5,22 @@ use anchor_spl::token::{self, Token, TokenAccount};
 #[derive(Accounts)]
 pub struct OrdinaryDeposit<'info> {
     #[account(mut)]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
-        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.get_voter_authority().key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = voter.get_registrar() == registrar.key()
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.get_voter_authority().key().as_ref()],
+        bump = voter.load()?.get_voter_bump(),
+        constraint = voter.load()?.get_registrar() == registrar.key()
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
 
     #[account(
         mut,
         associated_token::authority = voter,
-        associated_token::mint = registrar.governing_token_mint,
+        associated_token::mint = registrar.load()?.governing_token_mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
@@ -47,7 +47,7 @@ impl<'info> OrdinaryDeposit<'info> {
     }
 }
 
-/// Adds tokens to a ordinary deposit entry.
+/// Adds tokens to an ordinary deposit entry.
 ///
 /// Tokens will be transfered from deposit_token to vault using the deposit_authority.
 ///
@@ -70,8 +70,8 @@ pub fn ordinary_deposit(
         token::transfer(ctx.accounts.transfer_ctx(), amount)?;
     }
 
-    let registrar = &mut ctx.accounts.registrar;
-    let voter = &mut ctx.accounts.voter;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
+    let voter = &mut ctx.accounts.voter.load_mut()?;
     require_gte!(
         duration.seconds(),
         registrar
@@ -82,7 +82,7 @@ pub fn ordinary_deposit(
     );
 
     let curr_ts = registrar.clock_unix_timestamp();
-    let lockup = Lockup::new_from_kind(LockupKind::Constant(duration), curr_ts, curr_ts)?;
+    let lockup = Lockup::new_from_kind(LockupKind::constant(duration), curr_ts, curr_ts)?;
 
     // accrue rewards
     registrar.accrue_rewards(curr_ts);
@@ -90,13 +90,15 @@ pub fn ordinary_deposit(
     let mut amount_to_deposit: u64 = amount;
     if voter.is_active(deposit_entry_index)? {
         let d_entry = voter.deposit_entry_at(deposit_entry_index)?;
-        if let LockupKind::Constant(old_duration) = d_entry.get_lockup().kind() {
+        let lockup_kind = d_entry.get_lockup().kind;
+        if let LockupKindKind::Constant = lockup_kind.kind {
             require_eq!(
                 d_entry.get_amount_deposited_native(),
                 d_entry.get_amount_initially_locked_native(),
                 VsrError::InternalProgramError
             );
 
+            let old_duration = lockup_kind.duration;
             if old_duration.seconds() > duration.seconds() {
                 return Err(error!(VsrError::CanNotShortenLockupDuration));
             }

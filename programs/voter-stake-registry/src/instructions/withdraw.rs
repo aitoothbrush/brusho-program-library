@@ -7,18 +7,18 @@ use anchor_spl::token::{self, Token, TokenAccount};
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(mut)]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
-        bump = voter.get_voter_bump(),
-        constraint = voter.get_registrar() == registrar.key(),
-        constraint = voter.get_voter_authority() == voter_authority.key(),
+        bump = voter.load()?.get_voter_bump(),
+        constraint = voter.load()?.get_registrar() == registrar.key(),
+        constraint = voter.load()?.get_voter_authority() == voter_authority.key(),
     )]
-    pub voter: Box<Account<'info, Voter>>,
+    pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
 
     /// The token_owner_record for the voter_authority. This is needed
@@ -38,17 +38,17 @@ pub struct Withdraw<'info> {
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter_authority.key().as_ref()],
-        bump = voter.get_voter_weight_record_bump(),
-        constraint = voter_weight_record.realm == registrar.realm,
-        constraint = voter_weight_record.governing_token_owner == voter.get_voter_authority(),
-        constraint = voter_weight_record.governing_token_mint == registrar.governing_token_mint,
+        bump = voter.load()?.get_voter_weight_record_bump(),
+        constraint = voter_weight_record.realm == registrar.load()?.realm,
+        constraint = voter_weight_record.governing_token_owner == voter.load()?.get_voter_authority(),
+        constraint = voter_weight_record.governing_token_mint == registrar.load()?.governing_token_mint,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
 
     #[account(
         mut,
         associated_token::authority = voter,
-        associated_token::mint = registrar.governing_token_mint,
+        associated_token::mint = registrar.load()?.governing_token_mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
@@ -81,7 +81,7 @@ impl<'info> Withdraw<'info> {
 pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     {
         // Transfer the tokens to withdraw.
-        let voter = &ctx.accounts.voter;
+        let voter = &ctx.accounts.voter.load()?;
         require!(
             voter.is_active(deposit_entry_index)?,
             VsrError::InactiveDepositEntry
@@ -96,8 +96,8 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     }
 
     // Load the accounts.
-    let registrar = &mut ctx.accounts.registrar;
-    let voter = &mut ctx.accounts.voter;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
+    let voter = &mut ctx.accounts.voter.load_mut()?;
 
     // Governance may forbid withdraws, for example when engaged in a vote.
     let token_owner_record = load_token_owner_record(

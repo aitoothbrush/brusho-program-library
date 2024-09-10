@@ -8,7 +8,7 @@ pub struct UpdateDepositConfig<'info> {
         mut, 
         has_one = realm_authority,
     )]
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
 
     pub realm_authority: Signer<'info>,
 }
@@ -23,7 +23,7 @@ pub fn update_deposit_config(
         VsrError::NodeSecurityDepositMustBePositive
     );
 
-    let registrar = &mut ctx.accounts.registrar;
+    let registrar = &mut ctx.accounts.registrar.load_mut()?;
     registrar.deposit_config = deposit_config;
 
     Ok(())

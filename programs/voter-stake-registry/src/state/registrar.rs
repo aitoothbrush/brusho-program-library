@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::error::*;
 use crate::state::lockup::*;
 use anchor_lang::prelude::*;
@@ -14,22 +12,23 @@ pub const FULL_REWARD_PERMANENTLY_LOCKED_FLOOR: u64 = 195_000_000_000_000; // 19
 pub const SECS_PER_YEAR: u64 = SECS_PER_DAY * 365;
 
 /// Instance of a voting rights distributor.
-#[account]
+#[account(zero_copy)]
 pub struct Registrar {
     pub governance_program_id: Pubkey,
     pub realm: Pubkey,
     pub realm_authority: Pubkey,
     pub governing_token_mint: Pubkey,
 
-    /// Storage for voting configuration: voting_config + reserved2.
+    /// Storage for voting configuration: voting_config + reserved1.
     pub voting_config: VotingConfig,
-    pub reserved1: [u8; 40],
-    /// Storage for deposit configuration: deposit_config + reserved3.
+    pub reserved1: [u64; 5],
+
+    /// Storage for deposit configuration: deposit_config + reserved2.
     pub deposit_config: DepositConfig,
-    pub reserved2: [u8; 40],
+    pub reserved2: [u64; 5],
 
     // The current value of reward amount per second.
-    pub current_reward_amount_per_second: Exponential,
+    pub current_reward_amount_per_second: u128,
 
     /// The last time 'current_reward_amount_per_second' was rotated.
     pub last_reward_amount_per_second_rotated_ts: i64,
@@ -38,7 +37,7 @@ pub struct Registrar {
     pub reward_accrual_ts: i64,
 
     /// Accumulator of the total earned rewards rate since the opening
-    pub reward_index: Exponential,
+    pub reward_index: u128,
 
     /// Amount of rewards that were issued.
     pub issued_reward_amount: u64,
@@ -52,10 +51,11 @@ pub struct Registrar {
 
     pub bump: u8,
     pub max_voter_weight_record_bump: u8,
-    pub reserved3: [u8; 54],
+    pub reserved3: [u8; 14],
+    pub reserved4: [u64; 9],
 }
 const_assert!(
-    std::mem::size_of::<Registrar>() == 4 * 32 + 64 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 1 + 54
+    std::mem::size_of::<Registrar>() == 4 * 32 + 80 + 64 + 16 + 8 + 8 + 16 + 8 * 3 + 1 + 1 + 86
 );
 const_assert!(std::mem::size_of::<Registrar>() % 8 == 0);
 
@@ -91,24 +91,24 @@ impl Registrar {
 
         let reward_index_delta = if self.permanently_locked_amount != 0 {
             self.current_reward_amount_per_second
-                .mul_scalar(seconds_delta as u128)
+                .mul_scalar(seconds_delta as core::primitive::u128)
                 .div_scalar(u64::max(
                     self.permanently_locked_amount,
                     FULL_REWARD_PERMANENTLY_LOCKED_FLOOR,
-                ) as u128)
+                ) as core::primitive::u128)
         } else {
-            Exponential::new(0)
+            u128::new(0)
         };
 
         let issued_reward_amount_delta = u64::try_from(
             reward_index_delta
-                .mul_scalar(self.permanently_locked_amount as u128)
+                .mul_scalar(self.permanently_locked_amount as core::primitive::u128)
                 .truncate(),
         )
         .unwrap();
 
         self.reward_accrual_ts = curr_ts;
-        self.reward_index = self.reward_index.add_exp(reward_index_delta);
+        self.reward_index = self.reward_index.add(reward_index_delta);
         self.issued_reward_amount = self
             .issued_reward_amount
             .checked_add(issued_reward_amount_delta)
@@ -125,9 +125,9 @@ impl Registrar {
                 .checked_mul(12)
                 .unwrap()
                 .checked_div(100)
-                .unwrap() as u128;
+                .unwrap() as core::primitive::u128;
             self.current_reward_amount_per_second =
-                Exponential::new_with_denom(current_annual_reward_amount, SECS_PER_YEAR as u128);
+                u128::new_with_denom(current_annual_reward_amount, SECS_PER_YEAR as core::primitive::u128);
             self.last_reward_amount_per_second_rotated_ts = curr_ts;
         }
     }
@@ -139,7 +139,7 @@ macro_rules! registrar_seeds {
         &[
             $registrar.realm.as_ref(),
             b"registrar".as_ref(),
-            $registrar.realm_governing_token_mint.as_ref(),
+            $registrar.governing_token_mint.as_ref(),
             &[$registrar.bump],
         ]
     };
@@ -152,7 +152,8 @@ pub use registrar_seeds;
 /// See documentation of configure_voting_mint for details on how
 /// native token amounts convert to vote weight.
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
+#[zero_copy]
 pub struct VotingConfig {
     /// Vote weight factor for all funds in the account, no matter if locked or not.
     ///
@@ -206,93 +207,88 @@ impl VotingConfig {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
+#[zero_copy]
 pub struct DepositConfig {
+    /// The minimal lock up duration for ordinary deposit.
     pub ordinary_deposit_min_lockup_duration: LockupTimeDuration,
+    /// The lock up duration for node deposit.
     pub node_deposit_lockup_duration: LockupTimeDuration,
+    /// Specific amount for node deposit.
     pub node_security_deposit: u64,
 }
-
-const_assert!(std::mem::size_of::<DepositConfig>() == 3 * 8);
+const_assert!(std::mem::size_of::<DepositConfig>() == 16 + 16 + 8);
 const_assert!(std::mem::size_of::<DepositConfig>() % 8 == 0);
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug)]
-pub struct RewardConfig {
-    pub ordinary_deposit_min_lockup_duration: LockupTimeDuration,
-    pub node_deposit_lockup_duration: LockupTimeDuration,
-    pub node_security_deposit: u64,
-}
+/// Wrapper of core::primitive::u128.
+/// In order to avoid 16 bits alignment problem.
+/// See: https://solana.stackexchange.com/questions/7720/using-u128-without-sacrificing-alignment-8
+/// 
+#[derive(Copy, Clone, bytemuck::Zeroable, bytemuck::Pod)]
+#[repr(C)]
+pub struct u128([u8; 16]);
+pub const EXP_SCALE: core::primitive::u128 = 1_000_000_000_000_000_000;
 
-const_assert!(std::mem::size_of::<DepositConfig>() == 3 * 8);
-const_assert!(std::mem::size_of::<DepositConfig>() % 8 == 0);
-
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
-pub struct Exponential {
-    v: u128,
-}
-pub const EXP_SCALE: u128 = 1_000_000_000_000_000_000;
-
-impl Exponential {
+impl u128 {
     #[inline(always)]
-    pub fn new(num: u128) -> Exponential {
-        Exponential {
-            v: EXP_SCALE.checked_mul(num).unwrap(),
-        }
+    pub fn new(num: core::primitive::u128) -> u128 {
+        u128(EXP_SCALE.checked_mul(num).unwrap().to_le_bytes())
     }
 
     #[inline(always)]
-    pub fn new_with_denom(num: u128, denom: u128) -> Exponential {
-        Exponential {
-            v: EXP_SCALE
+    pub fn new_with_denom(num: core::primitive::u128, denom: core::primitive::u128) -> u128 {
+        u128(
+            EXP_SCALE
                 .checked_mul(num)
                 .unwrap()
                 .checked_div(denom)
-                .unwrap(),
-        }
+                .unwrap()
+                .to_le_bytes(),
+        )
     }
 
     #[inline(always)]
-    pub fn as_u128(&self) -> u128 {
-        self.v
+    pub fn as_u128(&self) -> core::primitive::u128 {
+        core::primitive::u128::from_le_bytes(self.0)
     }
 
     #[inline(always)]
-    pub fn add_exp(&self, exp: Exponential) -> Exponential {
-        Exponential {
-            v: self.v.checked_add(exp.v).unwrap(),
-        }
+    pub fn add(&self, exp: u128) -> u128 {
+        u128(
+            self.as_u128()
+                .checked_add(exp.as_u128())
+                .unwrap()
+                .to_le_bytes(),
+        )
     }
 
     #[inline(always)]
-    pub fn sub_exp(&self, exp: Exponential) -> Exponential {
-        Exponential {
-            v: self.v.checked_sub(exp.v).unwrap(),
-        }
+    pub fn sub(&self, exp: u128) -> u128 {
+        u128(
+            self.as_u128()
+                .checked_sub(exp.as_u128())
+                .unwrap()
+                .to_le_bytes(),
+        )
     }
 
     #[inline(always)]
-    pub fn mul_scalar(&self, scalar: u128) -> Exponential {
-        Exponential {
-            v: self.v.checked_mul(scalar).unwrap(),
-        }
+    pub fn mul_scalar(&self, scalar: core::primitive::u128) -> u128 {
+        u128 (
+            self.as_u128().checked_mul(scalar).unwrap().to_le_bytes(),
+        )
     }
 
     #[inline(always)]
-    pub fn div_scalar(&self, scalar: u128) -> Exponential {
-        Exponential {
-            v: self.v.checked_div(scalar).unwrap(),
-        }
+    pub fn div_scalar(&self, scalar: core::primitive::u128) -> u128 {
+        u128 (
+            self.as_u128().checked_div(scalar).unwrap().to_le_bytes(),
+        )
     }
 
     #[inline(always)]
-    pub fn truncate(&self) -> u128 {
-        self.v.checked_div(EXP_SCALE).unwrap()
-    }
-}
-
-impl Display for Exponential {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.as_u128().to_string())
+    pub fn truncate(&self) -> core::primitive::u128 {
+        self.as_u128().checked_div(EXP_SCALE).unwrap()
     }
 }
 
@@ -306,7 +302,7 @@ mod tests {
     use solana_sdk::{clock::SECONDS_PER_DAY, pubkey::Pubkey, timing::SECONDS_PER_YEAR};
 
     use super::{
-        DepositConfig, Exponential, LockupTimeUnit, Registrar, VotingConfig, SECS_PER_YEAR,
+        DepositConfig, u128, LockupTimeUnit, Registrar, VotingConfig, SECS_PER_YEAR,
     };
 
     fn new_registrar_data() -> Registrar {
@@ -320,29 +316,32 @@ mod tests {
                 max_extra_lockup_vote_weight_scaled_factor: 1,
                 lockup_saturation_secs: 1,
             },
-            reserved1: [0; 40],
+            reserved1: [0; 5],
             deposit_config: DepositConfig {
                 ordinary_deposit_min_lockup_duration: crate::LockupTimeDuration {
                     periods: 1,
                     unit: crate::LockupTimeUnit::Day,
+                    filler: [0; 7]
                 },
                 node_deposit_lockup_duration: crate::LockupTimeDuration {
                     periods: 1,
                     unit: LockupTimeUnit::Month,
+                    filler: [0; 7]
                 },
                 node_security_deposit: 1,
             },
-            reserved2: [0; 40],
-            current_reward_amount_per_second: Exponential::new(0),
+            reserved2: [0; 5],
+            current_reward_amount_per_second: u128::new(0),
             last_reward_amount_per_second_rotated_ts: 0,
-            reward_index: Exponential::new(0),
+            reward_index: u128::new(0),
             reward_accrual_ts: 0,
             issued_reward_amount: 0,
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
             max_voter_weight_record_bump: 0,
-            reserved3: [0; 54],
+            reserved3: [0; 14],
+            reserved4: [0; 9],
         }
     }
 
@@ -354,7 +353,7 @@ mod tests {
         registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
-            (TOTAL_REWARD_AMOUNT as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
+            (TOTAL_REWARD_AMOUNT as core::primitive::u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as core::primitive::u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         assert_eq!(curr_ts, registrar.last_reward_amount_per_second_rotated_ts);
@@ -397,13 +396,13 @@ mod tests {
 
         let reward_index_delta = registrar
             .current_reward_amount_per_second
-            .mul_scalar(SECS_PER_DAY as u128)
-            .div_scalar(FULL_REWARD_PERMANENTLY_LOCKED_FLOOR as u128);
-        assert_eq!(reward_index_delta, registrar.reward_index);
+            .mul_scalar(SECS_PER_DAY as core::primitive::u128)
+            .div_scalar(FULL_REWARD_PERMANENTLY_LOCKED_FLOOR as core::primitive::u128);
+        assert_eq!(reward_index_delta.as_u128(), registrar.reward_index.as_u128());
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
         assert_eq!(
             reward_index_delta
-                .mul_scalar(registrar.permanently_locked_amount as u128)
+                .mul_scalar(registrar.permanently_locked_amount as core::primitive::u128)
                 .truncate() as u64,
             registrar.issued_reward_amount
         );
@@ -416,17 +415,17 @@ mod tests {
 
         let reward_index_delta = registrar
             .current_reward_amount_per_second
-            .mul_scalar(SECS_PER_DAY as u128)
-            .div_scalar(registrar.permanently_locked_amount as u128);
+            .mul_scalar(SECS_PER_DAY as core::primitive::u128)
+            .div_scalar(registrar.permanently_locked_amount as core::primitive::u128);
         assert_eq!(
-            registrar_cloned.reward_index.add_exp(reward_index_delta),
-            registrar.reward_index
+            registrar_cloned.reward_index.add(reward_index_delta).as_u128(),
+            registrar.reward_index.as_u128()
         );
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
         assert_eq!(
             registrar_cloned.issued_reward_amount
                 + reward_index_delta
-                    .mul_scalar(registrar.permanently_locked_amount as u128)
+                    .mul_scalar(registrar.permanently_locked_amount as core::primitive::u128)
                     .truncate() as u64,
             registrar.issued_reward_amount
         );
@@ -442,7 +441,7 @@ mod tests {
         let mut curr_ts = SECONDS_PER_YEAR as i64;
         registrar.accrue_rewards(curr_ts);
         assert_eq!(
-            ((TOTAL_REWARD_AMOUNT) as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
+            ((TOTAL_REWARD_AMOUNT) as core::primitive::u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as core::primitive::u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
@@ -454,7 +453,7 @@ mod tests {
         curr_ts += (364 * SECONDS_PER_DAY) as i64;
         registrar.accrue_rewards(curr_ts);
         assert_eq!(
-            (TOTAL_REWARD_AMOUNT as u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as u128),
+            (TOTAL_REWARD_AMOUNT as core::primitive::u128) * EXP_SCALE * 12 / 100 / (SECS_PER_YEAR as core::primitive::u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         assert_eq!(curr_ts, registrar.reward_accrual_ts);
@@ -465,9 +464,9 @@ mod tests {
         registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
-            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12
+            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as core::primitive::u128) * EXP_SCALE * 12
                 / 100
-                / (SECS_PER_YEAR as u128),
+                / (SECS_PER_YEAR as core::primitive::u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         // println!("{}", registrar.current_reward_amount_per_second);
@@ -480,9 +479,9 @@ mod tests {
         registrar.accrue_rewards(curr_ts);
 
         assert_eq!(
-            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as u128) * EXP_SCALE * 12
+            ((TOTAL_REWARD_AMOUNT - registrar.issued_reward_amount) as core::primitive::u128) * EXP_SCALE * 12
                 / 100
-                / (SECS_PER_YEAR as u128),
+                / (SECS_PER_YEAR as core::primitive::u128),
             registrar.current_reward_amount_per_second.as_u128()
         );
         // println!("{}", registrar.current_reward_amount_per_second);

@@ -53,9 +53,9 @@ describe("update_deposit_config!", () => {
       .rpc()
 
     const registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar);
-    assert.equal(registrarData.depositConfig.ordinaryDepositMinLockupDuration.periods, newDepositConfig.ordinaryDepositMinLockupDuration.periods)
+    assert.equal(registrarData.depositConfig.ordinaryDepositMinLockupDuration.periods.toNumber(), newDepositConfig.ordinaryDepositMinLockupDuration.periods.toNumber())
     assert.isTrue(registrarData.depositConfig.ordinaryDepositMinLockupDuration.unit.day != undefined)
-    assert.equal(registrarData.depositConfig.nodeDepositLockupDuration.periods, newDepositConfig.nodeDepositLockupDuration.periods)
+    assert.equal(registrarData.depositConfig.nodeDepositLockupDuration.periods.toNumber(), newDepositConfig.nodeDepositLockupDuration.periods.toNumber())
     assert.isTrue(registrarData.depositConfig.nodeDepositLockupDuration.unit.month != undefined)
     assert.equal(registrarData.depositConfig.nodeSecurityDeposit.toNumber(), newDepositConfig.nodeSecurityDeposit.toNumber())
   });

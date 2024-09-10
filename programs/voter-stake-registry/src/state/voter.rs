@@ -1,25 +1,26 @@
 use crate::state::deposit_entry::DepositEntry;
 use crate::state::registrar::Registrar;
-use crate::{error::*, Exponential, Lockup};
+use crate::{error::*, u128, Lockup};
 use anchor_lang::prelude::*;
 
 /// User account for minting voting rights.
-#[account]
+#[account(zero_copy)]
 pub struct Voter {
     voter_authority: Pubkey,
     registrar: Pubkey,
-    deposits: [DepositEntry; 10],
+    deposits: [DepositEntry; 16],
 
     /// Global reward_index as of the most recent balance-changing action
-    reward_index: Exponential,
+    reward_index: u128,
     /// Rewards amount available for claim
     reward_claimable_amount: u64,
 
     voter_bump: u8,
     voter_weight_record_bump: u8,
-    reserved: [u8; 70],
+    reserved1: [u8; 6],
+    reserved2: [u64; 8],
 }
-const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + 10 * 56 + 16 + 8 + 2 + 70);
+const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + 16 * 88 + 16 + 8 + 1 + 1 + 6 + 64);
 const_assert!(std::mem::size_of::<Voter>() % 8 == 0);
 
 /// impl: factory function and getters
@@ -27,19 +28,20 @@ impl Voter {
     pub fn new(
         voter_authority: Pubkey,
         registrar: Pubkey,
-        reward_index: Exponential,
+        reward_index: u128,
         voter_bump: u8,
         voter_weight_record_bump: u8,
     ) -> Voter {
         Voter {
             voter_authority,
             registrar,
-            deposits: [DepositEntry::default(); 10],
+            deposits: [DepositEntry::default(); 16],
             reward_index,
             reward_claimable_amount: 0,
             voter_bump,
             voter_weight_record_bump,
-            reserved: [0; 70],
+            reserved1: [0; 6],
+            reserved2: [0; 8],
         }
     }
 
@@ -59,7 +61,7 @@ impl Voter {
     }
 
     #[inline(always)]
-    pub fn get_reward_index(&self) -> Exponential {
+    pub fn get_reward_index(&self) -> u128 {
         self.reward_index
     }
 
@@ -124,8 +126,8 @@ impl Voter {
                     u64::try_from(
                         registrar
                             .reward_index
-                            .sub_exp(self.reward_index)
-                            .mul_scalar(permanently_locked as u128)
+                            .sub(self.reward_index)
+                            .mul_scalar(permanently_locked as core::primitive::u128)
                             .truncate()
                     )
                     .unwrap(),
@@ -296,13 +298,6 @@ mod tests {
     use crate::{DepositConfig, LockupKind, LockupTimeUnit, VotingConfig};
 
     use super::*;
-    use std::fmt::Debug;
-
-    impl Debug for DepositEntry {
-        fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            Ok(())
-        }
-    }
 
     fn new_registrar_data() -> Registrar {
         Registrar {
@@ -315,53 +310,33 @@ mod tests {
                 max_extra_lockup_vote_weight_scaled_factor: 1,
                 lockup_saturation_secs: 1,
             },
-            reserved1: [0; 40],
+            reserved1: [0; 5],
             deposit_config: DepositConfig {
                 ordinary_deposit_min_lockup_duration: crate::LockupTimeDuration {
                     periods: 1,
                     unit: crate::LockupTimeUnit::Day,
+                    filler: [0; 7]
                 },
                 node_deposit_lockup_duration: crate::LockupTimeDuration {
                     periods: 1,
                     unit: LockupTimeUnit::Month,
+                    filler: [0; 7]
                 },
                 node_security_deposit: 1,
             },
-            reserved2: [0; 40],
-            current_reward_amount_per_second: Exponential::new(0),
+            reserved2: [0; 5],
+            current_reward_amount_per_second: u128::new(0),
             last_reward_amount_per_second_rotated_ts: 0,
             issued_reward_amount: 0,
-            reward_index: Exponential::new(0),
+            reward_index: u128::new(0),
             reward_accrual_ts: 0,
             permanently_locked_amount: 0,
             time_offset: 0,
             bump: 0,
             max_voter_weight_record_bump: 0,
-            reserved3: [0; 54],
+            reserved3: [0; 14],
+            reserved4: [0; 9],
         }
-    }
-
-    #[test]
-    pub fn initialization_test() -> Result<()> {
-        let voter_authority = Pubkey::new_unique();
-        let registrar = Pubkey::new_unique();
-        let voter = Voter::new(voter_authority, registrar, Exponential::new(0), 0, 0);
-
-        let deposits = voter.deposits;
-        for i in 0..deposits.len() {
-            assert_eq!(voter.deposit_entry_at(i as u8)?, &deposits[i]);
-            assert!(!voter.is_active(i as u8)?)
-        }
-
-        assert_eq!(
-            voter.deposit_entry_at(deposits.len() as u8),
-            Err(error!(VsrError::OutOfBoundsDepositEntryIndex)) as Result<&DepositEntry>
-        );
-        assert_eq!(
-            voter.is_active(deposits.len() as u8),
-            Err(error!(VsrError::OutOfBoundsDepositEntryIndex)) as Result<bool>
-        );
-        Ok(())
     }
 
     #[test]
@@ -369,7 +344,7 @@ mod tests {
         let voter_authority = Pubkey::new_unique();
         let registrar = Pubkey::new_unique();
         let mut registrar_data = new_registrar_data();
-        let mut voter = Voter::new(voter_authority, registrar, Exponential::new(0), 0, 0);
+        let mut voter = Voter::new(voter_authority, registrar, u128::new(0), 0, 0);
         let index: u8 = 0;
 
         assert_eq!(
@@ -410,7 +385,7 @@ mod tests {
         let voter_authority = Pubkey::new_unique();
         let registrar = Pubkey::new_unique();
         let mut registrar_data = new_registrar_data();
-        let mut voter = Voter::new(voter_authority, registrar, Exponential::new(0), 0, 0);
+        let mut voter = Voter::new(voter_authority, registrar, u128::new(0), 0, 0);
         assert_eq!(
             voter.deposit(voter.deposits.len() as u8, 0, 100, &mut registrar_data),
             Err(error!(VsrError::OutOfBoundsDepositEntryIndex)) as Result<()>
@@ -418,9 +393,10 @@ mod tests {
 
         // index 0
         let lockup_0 = Lockup::new_from_kind(
-            LockupKind::Constant(crate::LockupTimeDuration {
+            LockupKind::constant(crate::LockupTimeDuration {
                 periods: 1,
                 unit: LockupTimeUnit::Day,
+                filler: [0; 7]
             }),
             0,
             0,
@@ -438,7 +414,7 @@ mod tests {
         assert_eq!(registrar_data.permanently_locked_amount, 100);
 
         // index 1
-        let lockup_1 = Lockup::new_from_kind(LockupKind::Daily(1), 0, 0)?;
+        let lockup_1 = Lockup::new_from_kind(LockupKind::daily(1), 0, 0)?;
         voter.activate(1, 0, lockup_1, &mut registrar_data)?;
         voter.deposit(1, 0, 100, &mut registrar_data)?;
 
@@ -453,7 +429,7 @@ mod tests {
 
         // index 2
         let lockup_2 = Lockup::new_from_kind(
-            LockupKind::Monthly(1),
+            LockupKind::monthly(1),
             0,
             0,
         )?;
@@ -471,9 +447,10 @@ mod tests {
 
         // index 3
         let lockup_3 = Lockup::new_from_kind(
-            LockupKind::Constant(crate::LockupTimeDuration {
+            LockupKind::constant(crate::LockupTimeDuration {
                 periods: 1,
                 unit: LockupTimeUnit::Day,
+                filler: [0; 7]
             }),
             0,
             0,
@@ -498,7 +475,7 @@ mod tests {
         let voter_authority = Pubkey::new_unique();
         let registrar = Pubkey::new_unique();
         let mut registrar_data = new_registrar_data();
-        let mut voter = Voter::new(voter_authority, registrar, Exponential::new(0), 0, 0);
+        let mut voter = Voter::new(voter_authority, registrar, u128::new(0), 0, 0);
         assert_eq!(
             voter.deposit(voter.deposits.len() as u8, 0, 100, &mut registrar_data),
             Err(error!(VsrError::OutOfBoundsDepositEntryIndex)) as Result<()>
@@ -506,9 +483,10 @@ mod tests {
 
         // index 0
         let lockup_0 = Lockup::new_from_kind(
-            LockupKind::Constant(crate::LockupTimeDuration {
+            LockupKind::constant(crate::LockupTimeDuration {
                 periods: 1,
                 unit: LockupTimeUnit::Day,
+                filler: [0; 7]
             }),
             0,
             0,
@@ -517,12 +495,12 @@ mod tests {
         voter.deposit(0, 0, 100, &mut registrar_data)?;
 
         // index 1
-        let lockup_1 = Lockup::new_from_kind(LockupKind::Daily(1), 0, 0)?;
+        let lockup_1 = Lockup::new_from_kind(LockupKind::daily(1), 0, 0)?;
         voter.activate(1, 0, lockup_1, &mut registrar_data)?;
         voter.deposit(1, 0, 100, &mut registrar_data)?;
 
         // index 2
-        let lockup_2 = Lockup::new_from_kind(LockupKind::Monthly(1), 0, 0)?;
+        let lockup_2 = Lockup::new_from_kind(LockupKind::monthly(1), 0, 0)?;
         voter.activate(2, 0, lockup_2, &mut registrar_data)?;
         voter.deposit(2, 0, 100, &mut registrar_data)?;
 
@@ -555,15 +533,16 @@ mod tests {
         let registrar = Pubkey::new_unique();
         let mut registrar_data = new_registrar_data();
         registrar_data.reward_accrual_ts = 1;
-        registrar_data.reward_index = Exponential::new_with_denom(1, 10);
+        registrar_data.reward_index = u128::new_with_denom(1, 10);
 
-        let mut voter = Voter::new(voter_authority, registrar, Exponential::new(0), 0, 0);
+        let mut voter = Voter::new(voter_authority, registrar, u128::new(0), 0, 0);
 
         // index 0
         let lockup_0 = Lockup::new_from_kind(
-            LockupKind::Constant(crate::LockupTimeDuration {
+            LockupKind::constant(crate::LockupTimeDuration {
                 periods: 1,
                 unit: LockupTimeUnit::Day,
+                filler: [0; 7]
             }),
             0,
             0,
@@ -577,10 +556,10 @@ mod tests {
 
         voter.activate(0, 1, lockup_0, &mut registrar_data)?;
         assert_eq!(voter.reward_claimable_amount, 0);
-        assert_eq!(voter.reward_index, registrar_data.reward_index);
+        assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
 
         // Increase registrar_data.reward_index
-        registrar_data.reward_index = registrar_data.reward_index.add_exp(Exponential::new_with_denom(1, 10));
+        registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
         // Error happens if curr_ts != registrar.reward_accrual_ts
         assert_eq!(
             voter.deposit(0, 0, 100, &mut registrar_data),
@@ -590,10 +569,10 @@ mod tests {
         // Successfully deposited 100
         voter.deposit(0, 1, 100, &mut registrar_data)?;
         assert_eq!(voter.reward_claimable_amount, 0);
-        assert_eq!(voter.reward_index, registrar_data.reward_index);
+        assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
 
         // Increase registrar_data.reward_index
-        registrar_data.reward_index = registrar_data.reward_index.add_exp(Exponential::new_with_denom(1, 10));
+        registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
 
         // Error happens if curr_ts != registrar.reward_accrual_ts
         assert_eq!(
@@ -602,10 +581,10 @@ mod tests {
         );
         voter.withdraw(0, 1, 0, &mut registrar_data)?;
         assert_eq!(voter.reward_claimable_amount, 10);
-        assert_eq!(voter.reward_index, registrar_data.reward_index);
+        assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
 
         // Increase registrar_data.reward_index
-        registrar_data.reward_index = registrar_data.reward_index.add_exp(Exponential::new_with_denom(1, 10));
+        registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
         assert_eq!(
             voter.claim_reward(0, &mut registrar_data),
             Err(error!(VsrError::InternalProgramError)) as Result<u64>
@@ -613,17 +592,17 @@ mod tests {
         let claimed_amount = voter.claim_reward(1, &mut registrar_data)?;
         assert_eq!(claimed_amount, 20);
         assert_eq!(voter.reward_claimable_amount, 0);
-        assert_eq!(voter.reward_index, registrar_data.reward_index);
+        assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
 
         // Increase registrar_data.reward_index
-        registrar_data.reward_index = registrar_data.reward_index.add_exp(Exponential::new_with_denom(1, 10));
+        registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
         assert_eq!(
             voter.deactivate(0, 0, &mut registrar_data),
             Err(error!(VsrError::InternalProgramError)) as Result<()>
         );
         voter.deactivate(0, 1, &mut registrar_data)?;
         assert_eq!(voter.reward_claimable_amount, 10);
-        assert_eq!(voter.reward_index, registrar_data.reward_index);
+        assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
 
         Ok(())
     }

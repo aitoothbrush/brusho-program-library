@@ -6,16 +6,16 @@ use anchor_spl::token::Mint;
 // exchange rates.
 #[derive(Accounts)]
 pub struct UpdateMaxVoteWeight<'info> {
-    pub registrar: Box<Account<'info, Registrar>>,
+    pub registrar: AccountLoader<'info, Registrar>,
     /// Registrar.realm_governing_token_mint
     pub governing_token_mint: Account<'info, Mint>,
 
     #[account(
         mut,
-        seeds = [registrar.realm.key().as_ref(), b"max-voter-weight-record".as_ref(), registrar.governing_token_mint.key().as_ref()],
-        bump = registrar.max_voter_weight_record_bump,
-        constraint = max_voter_weight_record.realm == registrar.realm,
-        constraint = max_voter_weight_record.governing_token_mint == registrar.governing_token_mint,
+        seeds = [registrar.load()?.realm.key().as_ref(), b"max-voter-weight-record".as_ref(), registrar.load()?.governing_token_mint.key().as_ref()],
+        bump = registrar.load()?.max_voter_weight_record_bump,
+        constraint = max_voter_weight_record.realm == registrar.load()?.realm,
+        constraint = max_voter_weight_record.governing_token_mint == registrar.load()?.governing_token_mint,
     )]
     pub max_voter_weight_record: Account<'info, MaxVoterWeightRecord>,
 }
@@ -28,7 +28,7 @@ pub struct UpdateMaxVoteWeight<'info> {
 /// all tokens fits into a u64 *after* converting into common decimals, as
 /// defined by the registrar's `rate_decimal` field.
 pub fn update_max_vote_weight(ctx: Context<UpdateMaxVoteWeight>) -> Result<()> {
-    let registrar = &ctx.accounts.registrar;
+    let registrar = &ctx.accounts.registrar.load()?;
 
     let record = &mut ctx.accounts.max_voter_weight_record;
     record.max_voter_weight = registrar.max_vote_weight(&ctx.accounts.governing_token_mint)?;

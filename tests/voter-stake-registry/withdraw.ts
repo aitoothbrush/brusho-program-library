@@ -304,7 +304,7 @@ describe("withdraw!", () => {
     // verify voter account
     let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     let releaseEntry = voterData.deposits.at(releaseEntryIndex);
-    assert.isTrue(releaseEntry.isActive)
+    assert.isTrue(releaseEntry.isActive == 1)
     assert.isTrue(releaseEntry.amountDepositedNative.eq(depositAmount.sub(withdrawAmount)))
     assert.isTrue(releaseEntry.amountInitiallyLockedNative.eq(depositAmount))
 
@@ -314,7 +314,7 @@ describe("withdraw!", () => {
     const txTime = registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString()));
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
     assert.equal(registrarData.permanentlyLockedAmount.toString(), prevPermanentlyLockedAmount.toString());
-    assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+    assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
 
     // withdraw remains, deposit entry should have been deactivated.
     await VSR_PROGRAM.methods
@@ -335,7 +335,7 @@ describe("withdraw!", () => {
     // verify voter account
     voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     releaseEntry = voterData.deposits.at(releaseEntryIndex);
-    assert.isFalse(releaseEntry.isActive)
+    assert.isFalse(releaseEntry.isActive == 1)
   });
 });
 

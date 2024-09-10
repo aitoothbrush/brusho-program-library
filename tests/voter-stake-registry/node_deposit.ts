@@ -170,13 +170,14 @@ describe("node_deposit!", () => {
       .rpc({commitment: "confirmed"});
 
     const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
+    
     const depositEntry = voterData.deposits.at(nodeDepositEntryIndex);
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
     assert.isTrue(depositEntry.amountDepositedNative.eq(nodeSecurityDeposit))
     assert.isTrue(depositEntry.amountInitiallyLockedNative.eq(nodeSecurityDeposit))
-    assert.isTrue(depositEntry.lockup.kind.constant != undefined) // assert lockup kind is constant
-    assert.equal(depositEntry.lockup.kind.constant![0].periods, 6) // assert periods of lockup time duration is 5
-    assert.isTrue((depositEntry.lockup.kind.constant![0].unit as any).month != undefined) // assert unit of lockup time duration is 'Month'
+    assert.isTrue(depositEntry.lockup.kind.kind.constant != undefined) // assert lockup kind is constant
+    assert.equal(depositEntry.lockup.kind.duration.periods.toNumber(), 6) // assert periods of lockup time duration is 6
+    assert.isTrue((depositEntry.lockup.kind.duration.unit as any).month != undefined) // assert unit of lockup time duration is 'Month'
 
 
     // verify deposit token account
@@ -193,14 +194,14 @@ describe("node_deposit!", () => {
     const txTime = registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString())).toString();
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
     assert.equal(registrarData.permanentlyLockedAmount.toString(), nodeSecurityDeposit.toString());
-    assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+    assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
   });
 
   it("deposit_twice_should_fail", async () => {
     const nodeDepositEntryIndex = 0;
     let voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     let depositEntry = voterData.deposits.at(nodeDepositEntryIndex);
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
 
     // fastup time
     await fastup(registrar, authority, new anchor.BN(86400));

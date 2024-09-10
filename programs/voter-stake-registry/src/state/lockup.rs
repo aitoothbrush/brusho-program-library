@@ -1,5 +1,6 @@
 use crate::error::*;
 use anchor_lang::prelude::*;
+use bytemuck::{Pod, Zeroable};
 use std::convert::TryFrom;
 
 /// Seconds in one day.
@@ -16,14 +17,15 @@ pub const SECS_PER_MONTH: u64 = 365 * SECS_PER_DAY / 12;
 ///
 /// This setting limits the maximum lockup duration for lockup methods
 /// with daily periods to 200 years.
-pub const MAX_LOCKUP_PERIODS: u32 = 365 * 200;
+pub const MAX_LOCKUP_PERIODS: u64 = 365 * 200;
 
 pub const MAX_LOCKUP_IN_FUTURE_SECS: i64 = 100 * 365 * 24 * 60 * 60;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
+#[zero_copy]
 pub struct Lockup {
     /// Type of lockup.
-    kind: LockupKind,
+    pub kind: LockupKind,
 
     /// Start of the lockup.
     ///
@@ -32,9 +34,9 @@ pub struct Lockup {
     ///
     /// Similarly vote power computations don't care about start_ts and always
     /// assume the full interval from now to end_ts.
-    start_ts: i64,
+    pub start_ts: i64,
 }
-const_assert!(std::mem::size_of::<Lockup>() == 8 + 8);
+const_assert!(std::mem::size_of::<Lockup>() == 24 + 8);
 const_assert!(std::mem::size_of::<Lockup>() % 8 == 0);
 
 /// impl: factory function and getters
@@ -61,29 +63,19 @@ impl Lockup {
     pub fn new_from_duration(duration: LockupTimeDuration, curr_ts: i64, start_ts: i64) -> Result<Self> {
         match duration.unit {
             LockupTimeUnit::Day => {
-                Lockup::new_from_kind(LockupKind::Daily(duration.periods), curr_ts, start_ts)
+                Lockup::new_from_kind(LockupKind::daily(duration.periods), curr_ts, start_ts)
             }
             LockupTimeUnit::Month => {
-                Lockup::new_from_kind(LockupKind::Monthly(duration.periods), curr_ts, start_ts)
+                Lockup::new_from_kind(LockupKind::monthly(duration.periods), curr_ts, start_ts)
             }
         }
-    }
-
-    #[inline(always)]
-    pub fn kind(&self) -> LockupKind {
-        self.kind
-    }
-
-    #[inline(always)]
-    pub fn start_ts(&self) -> i64 {
-        self.start_ts
     }
 
     /// Return the end timestamp of this lockup
     #[inline(always)]
     pub fn end_ts(&self) -> i64 {
         self.start_ts
-            .checked_add(i64::try_from(self.kind.duration().seconds()).unwrap())
+            .checked_add(i64::try_from(self.kind.duration.seconds()).unwrap())
             .unwrap()
     }
 
@@ -104,8 +96,8 @@ impl Lockup {
     /// Number of seconds left in the lockup.
     /// May be more than end_ts-start_ts if curr_ts < start_ts.
     pub fn seconds_left(&self, mut curr_ts: i64) -> u64 {
-        curr_ts = match self.kind {
-            LockupKind::Constant(_) => self.start_ts,
+        curr_ts = match self.kind.kind {
+            LockupKindKind::Constant => self.start_ts,
             _ => curr_ts,
         };
 
@@ -147,56 +139,61 @@ impl Lockup {
     /// Returns the total amount of periods in the lockup.
     #[inline]
     pub fn periods_total(&self) -> u64 {
-        // Ok(lockup_secs.checked_div(period_secs).unwrap())
-        self.kind.duration().periods as u64
+        self.kind.periods() as u64
     }
 }
 
 impl Default for Lockup {
     fn default() -> Self {
         Lockup {
-            kind: LockupKind::Constant(LockupTimeDuration {
+            kind: LockupKind::constant(LockupTimeDuration {
                 periods: 0,
                 unit: LockupTimeUnit::Day,
+                filler: [0; 7]
             }),
             start_ts: 0,
         }
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
-pub enum LockupKind {
-    /// Lock up for a number of days, where a linear fraction vests each day.
-    Daily(u32),
-
-    /// Lock up for a number of months, where a linear fraction vests each month.
-    Monthly(u32),
-
-    /// Lock up permanently. The number of days specified becomes the minimum
-    /// unlock period when the deposit (or a part of it) is changed to Cliff.
-    Constant(LockupTimeDuration),
+#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct LockupKind {
+    pub duration: LockupTimeDuration,
+    pub kind: LockupKindKind,
+    pub filler: [u8; 7]
 }
-
-const_assert!(std::mem::size_of::<LockupKind>() == 8);
+const_assert!(std::mem::size_of::<LockupKind>() == 16 + 1 + 7);
+const_assert!(std::mem::size_of::<LockupKind>() % 8 == 0);
 
 impl LockupKind {
-    pub fn duration(&self) -> LockupTimeDuration {
-        match self {
-            LockupKind::Daily(periods) => LockupTimeDuration {
-                periods: *periods,
-                unit: LockupTimeUnit::Day,
-            },
-            LockupKind::Monthly(periods) => LockupTimeDuration {
-                periods: *periods,
-                unit: LockupTimeUnit::Month,
-            },
-            LockupKind::Constant(duration) => *duration,
+    pub fn daily(days: u64) -> LockupKind {
+        LockupKind {
+            duration: LockupTimeDuration { periods: days, unit: LockupTimeUnit::Day, filler: [0; 7] },
+            kind: LockupKindKind::Daily,
+            filler: [0; 7]
+        }
+    }
+
+    pub fn monthly(months: u64) -> LockupKind {
+        LockupKind {
+            duration: LockupTimeDuration { periods: months, unit: LockupTimeUnit::Month, filler: [0;7] },
+            kind: LockupKindKind::Monthly,
+            filler: [0; 7]
+        }
+    }
+
+    pub fn constant(duration: LockupTimeDuration) -> LockupKind {
+        LockupKind {
+            duration,
+            kind: LockupKindKind::Constant,
+            filler: [0; 7]
         }
     }
 
     #[inline(always)]
-    pub fn periods(&self) -> u32 {
-        self.duration().periods
+    pub fn periods(&self) -> u64 {
+        self.duration.periods
     }
 
     /// The lockup length is specified by passing the number of lockup periods
@@ -205,26 +202,43 @@ impl LockupKind {
     /// For vesting lockups, the period length is also the vesting period.
     #[inline(always)]
     pub fn period_secs(&self) -> u64 {
-        self.duration().unit.seconds()
+        self.duration.unit.seconds()
     }
 
     #[inline(always)]
     pub fn is_vesting(&self) -> bool {
-        match self {
-            LockupKind::Daily(_) => true,
-            LockupKind::Monthly(_) => true,
-            LockupKind::Constant(_) => false,
+        match self.kind {
+            LockupKindKind::Daily => true,
+            LockupKindKind::Monthly => true,
+            LockupKindKind::Constant => false,
         }
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
-pub struct LockupTimeDuration {
-    pub periods: u32,
-    pub unit: LockupTimeUnit,
+#[repr(u8)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Zeroable)]
+pub enum LockupKindKind {
+    /// Lock up for a number of days.
+    Daily,
+
+    /// Lock up for a number of months.
+    Monthly,
+
+    /// Lock up permanently. 
+    Constant,
 }
 
-const_assert!(std::mem::size_of::<LockupTimeDuration>() == 8);
+unsafe impl Pod for LockupKindKind { }
+
+#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Zeroable, Pod)]
+pub struct LockupTimeDuration {
+    pub periods: u64,
+    pub unit: LockupTimeUnit,
+    pub filler: [u8; 7]
+}
+const_assert!(std::mem::size_of::<LockupTimeDuration>() == 8 + 1 + 7);
+const_assert!(std::mem::size_of::<LockupTimeDuration>() % 8 == 0);
 
 impl LockupTimeDuration {
     pub fn seconds(&self) -> u64 {
@@ -235,11 +249,14 @@ impl LockupTimeDuration {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Zeroable)]
 pub enum LockupTimeUnit {
     Day,
     Month,
 }
+
+unsafe impl Pod for LockupTimeUnit { }
 
 impl LockupTimeUnit {
     pub fn seconds(&self) -> u64 {
@@ -261,7 +278,7 @@ mod tests {
 
     #[test]
     pub fn period_computations() -> Result<()> {
-        let lockup = Lockup::new_from_kind(LockupKind::Daily(3), 1000, 1000)?;
+        let lockup = Lockup::new_from_kind(LockupKind::daily(3), 1000, 1000)?;
         let day = SECS_PER_DAY as i64;
         assert_eq!(lockup.periods_total(), 3);
         assert_eq!(lockup.period_current(0)?, 0);
@@ -416,7 +433,7 @@ mod tests {
             expected_voting_power: locked_daily_power(amount_deposited, -1.5, 10),
             amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
             curr_day: -1.5,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -429,7 +446,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 0.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -442,7 +459,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 0.5,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -455,7 +472,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 1.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -468,7 +485,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 1.3,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -481,7 +498,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 2.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -494,7 +511,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 9.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -507,7 +524,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 9.9,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -520,7 +537,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 10.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -533,7 +550,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 10.1,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -546,7 +563,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 11.0,
-            kind: LockupKind::Daily(10),
+            kind: LockupKind::daily(10),
         })
     }
 
@@ -559,7 +576,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 0.0,
-            kind: LockupKind::Daily(MAX_DAYS_LOCKED.floor() as u32),
+            kind: LockupKind::daily(MAX_DAYS_LOCKED.floor() as u64),
         })
     }
 
@@ -572,7 +589,7 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 0.0,
-            kind: LockupKind::Daily((MAX_DAYS_LOCKED + 10.0).floor() as u32),
+            kind: LockupKind::daily((MAX_DAYS_LOCKED + 10.0).floor() as u64),
         })
     }
 
@@ -585,19 +602,19 @@ mod tests {
             expected_voting_power,
             amount_deposited,
             curr_day: 0.5,
-            kind: LockupKind::Daily((MAX_DAYS_LOCKED + 10.0).floor() as u32),
+            kind: LockupKind::daily((MAX_DAYS_LOCKED + 10.0).floor() as u64),
         })
     }
 
     struct TestDaysLeft {
         expected_days_left: u64,
-        days_total: u32,
+        days_total: u64,
         curr_day: f64,
     }
 
     struct TestMonthsLeft {
         expected_months_left: u64,
-        months_total: u32,
+        months_total: u64,
         curr_month: f64,
     }
 
@@ -612,7 +629,7 @@ mod tests {
         let start_ts = 1634929833;
         let curr_ts = start_ts + days_to_secs(t.curr_day);
         let l = Lockup {
-            kind: LockupKind::Daily(t.days_total),
+            kind: LockupKind::daily(t.days_total),
             start_ts,
         };
         let days_left = l.periods_left(curr_ts)?;
@@ -624,7 +641,7 @@ mod tests {
         let start_ts = 1634929833;
         let curr_ts = start_ts + months_to_secs(t.curr_month);
         let l = Lockup {
-            kind: LockupKind::Monthly(t.months_total),
+            kind: LockupKind::monthly(t.months_total),
             start_ts,
         };
         let months_left = l.periods_left(curr_ts)?;

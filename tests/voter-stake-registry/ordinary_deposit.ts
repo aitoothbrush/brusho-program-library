@@ -207,12 +207,12 @@ describe("ordinary_deposit!", () => {
 
     const voterData = await VSR_PROGRAM.account.voter.fetch(voter);
     const depositEntry = voterData.deposits.at(depositEntryIndex);
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
     assert.isTrue(depositEntry.amountDepositedNative.eq(depositAmount))
     assert.isTrue(depositEntry.amountInitiallyLockedNative.eq(depositAmount))
-    assert.isTrue(depositEntry.lockup.kind.constant != undefined) // assert lockup kind is constant
-    assert.equal(depositEntry.lockup.kind.constant![0].periods, 15) // assert periods of lockup time duration is 15
-    assert.isTrue((depositEntry.lockup.kind.constant![0].unit as any).day != undefined) // assert unit of lockup time duration is Day
+    assert.isTrue(depositEntry.lockup.kind.kind.constant != undefined) // assert lockup kind is constant
+    assert.equal(depositEntry.lockup.kind.duration.periods.toNumber(), 15) // assert periods of lockup time duration is 15
+    assert.isTrue((depositEntry.lockup.kind.duration.unit as any).day != undefined) // assert unit of lockup time duration is Day
 
     // verify deposit token account
     const newVoterTokenAccountBalance = new anchor.BN((await getTokenAccount(voterTokenAccount)).amount.toString()); 
@@ -228,7 +228,7 @@ describe("ordinary_deposit!", () => {
     const txTime = registrarData.timeOffset.add(new anchor.BN(tx.blockTime.toString()));
     assert.equal(registrarData.rewardAccrualTs.toString(), txTime.toString());
     assert.equal(registrarData.permanentlyLockedAmount.toString(), depositAmount.toString());
-    assert.equal(registrarData.rewardIndex.v.toString(), voterData.rewardIndex.v.toString())
+    assert.equal(registrarData.rewardIndex.toString(), voterData.rewardIndex.toString())
   });
 
   it("deposit_multi_times_should_work", async () => {
@@ -276,12 +276,12 @@ describe("ordinary_deposit!", () => {
     depositEntry = voterData.deposits.at(depositEntryIndex);
     let newlockupStartTs = depositEntry.lockup.startTs;
 
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
     assert.isTrue(depositEntry.amountDepositedNative.eq(totalDepositAmount))
     assert.isTrue(depositEntry.amountInitiallyLockedNative.eq(totalDepositAmount))
-    assert.isTrue(depositEntry.lockup.kind.constant != undefined) // assert lockup kind is constant
-    assert.equal(depositEntry.lockup.kind.constant![0].periods, 16) // assert periods of lockup time duration is 6
-    assert.isTrue((depositEntry.lockup.kind.constant![0].unit as any).day != undefined) // assert unit of lockup time duration is Month
+    assert.isTrue(depositEntry.lockup.kind.kind.constant != undefined) // assert lockup kind is constant
+    assert.equal(depositEntry.lockup.kind.duration.periods.toNumber(), 16) // assert periods of lockup time duration is 6
+    assert.isTrue((depositEntry.lockup.kind.duration.unit as any).day != undefined) // assert unit of lockup time duration is Month
     assert.isTrue(newlockupStartTs.gte(lockupStartTs)) // The start ts of lockup moves
 
     // fastup time
@@ -304,12 +304,12 @@ describe("ordinary_deposit!", () => {
     depositEntry = voterData.deposits.at(depositEntryIndex);
     newlockupStartTs = depositEntry.lockup.startTs;
 
-    assert.isTrue(depositEntry.isActive)
+    assert.isTrue(depositEntry.isActive == 1)
     assert.isTrue(depositEntry.amountDepositedNative.eq(totalDepositAmount))
     assert.isTrue(depositEntry.amountInitiallyLockedNative.eq(totalDepositAmount))
-    assert.isTrue(depositEntry.lockup.kind.constant != undefined) // assert lockup kind is constant
-    assert.equal(depositEntry.lockup.kind.constant![0].periods, 6) // assert periods of lockup time duration is 6
-    assert.isTrue((depositEntry.lockup.kind.constant![0].unit as any).month != undefined) // assert unit of lockup time duration is Month
+    assert.isTrue(depositEntry.lockup.kind.kind.constant != undefined) // assert lockup kind is constant
+    assert.equal(depositEntry.lockup.kind.duration.periods.toNumber(), 6) // assert periods of lockup time duration is 6
+    assert.isTrue((depositEntry.lockup.kind.duration.unit as any).month != undefined) // assert unit of lockup time duration is Month
     assert.isTrue(newlockupStartTs.gte(lockupStartTs)) // The start ts of lockup moves
 
     await assertThrowsAnchorError('CanNotShortenLockupDuration', async () => {
