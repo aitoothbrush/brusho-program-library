@@ -142,8 +142,8 @@ pub mod voter_stake_registry {
         instructions::withdraw(ctx, deposit_entry_index, amount)
     }
 
-    pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
-        instructions::claim_reward(ctx)
+    pub fn claim_reward(ctx: Context<ClaimReward>, amount: Option<u64>) -> Result<()> {
+        instructions::claim_reward(ctx, amount)
     }
 
     pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {

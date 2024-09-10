@@ -51,7 +51,7 @@ pub struct ClaimReward<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
+pub fn claim_reward(ctx: Context<ClaimReward>, amount: Option<u64>) -> Result<()> {
     let claimed_amount = {
         // Load the accounts.
         let registrar = &mut ctx.accounts.registrar.load_mut()?;
@@ -62,7 +62,7 @@ pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
         registrar.accrue_rewards(curr_ts);
 
         // claim reward
-        let claimed_amount = voter.claim_reward(curr_ts, registrar)?;
+        let claimed_amount = voter.claim_reward(curr_ts, amount, registrar)?;
         claimed_amount
     };
 

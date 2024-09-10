@@ -53,121 +53,121 @@ async function createRegistrar(
 }
 
 describe("create_registrar!", () => {
-  // describe("PDA Verification", () => {
-  //   it("with_incorrect_governing_token_mint_should_fail", async () => {
-  //     const realmAuthority = await newSigner();
-  //     let [mint, councilMint, realm] = await createRealm(realmAuthority);
+  describe("PDA Verification", () => {
+    it("with_incorrect_governing_token_mint_should_fail", async () => {
+      const realmAuthority = await newSigner();
+      let [mint, councilMint, realm] = await createRealm(realmAuthority);
 
-  //     const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
-  //     const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
+      const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
+      const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
 
-  //     const vault = getAssociatedTokenAddressSync(mint, registrar, true);
-  //     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
-  //     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+      const vault = getAssociatedTokenAddressSync(mint, registrar, true);
+      const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+      const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
-  //     const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
-  //     const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
-  //     await assertThrowsAnchorError('ConstraintSeeds', async () => {
-  //       // use councilMint 
-  //       await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, councilMint, realmAuthority, realmAuthority);
-  //     })
-  //   });
+      await assertThrowsAnchorError('ConstraintSeeds', async () => {
+        // use councilMint 
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, councilMint, realmAuthority, realmAuthority);
+      })
+    });
 
-  //   it("with_incorrect_bump_should_fail", async () => {
-  //     const realmAuthority = await newSigner();
-  //     let [mint, councilMint, realm] = await createRealm(realmAuthority);
+    it("with_incorrect_bump_should_fail", async () => {
+      const realmAuthority = await newSigner();
+      let [mint, councilMint, realm] = await createRealm(realmAuthority);
 
-  //     const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
-  //     const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
+      const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
+      const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
 
-  //     const vault = getAssociatedTokenAddressSync(mint, registrar, true);
-  //     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
-  //     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+      const vault = getAssociatedTokenAddressSync(mint, registrar, true);
+      const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+      const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
-  //     const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
-  //     const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
-  //     await assertThrowsAnchorError('RequireEqViolated', async () => {
-  //       await createRegistrar(bump - 1, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority);
-  //     });
-  //   });
-  // });
+      await assertThrowsAnchorError('RequireEqViolated', async () => {
+        await createRegistrar(bump - 1, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority);
+      });
+    });
+  });
 
-  // describe("Args verification", () => {
-  //   it("with_zero_lockup_saturation_secs_should_fail", async () => {
-  //     const realmAuthority = await newSigner();
-  //     let [mint, councilMint, realm] = await createRealm(realmAuthority);
+  describe("Args verification", () => {
+    it("with_zero_lockup_saturation_secs_should_fail", async () => {
+      const realmAuthority = await newSigner();
+      let [mint, councilMint, realm] = await createRealm(realmAuthority);
 
-  //     const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
-  //     const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
+      const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
+      const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
 
-  //     const vault = getAssociatedTokenAddressSync(mint, registrar, true);
-  //     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
-  //     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+      const vault = getAssociatedTokenAddressSync(mint, registrar, true);
+      const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+      const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
-  //     const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
-  //     const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
-  //     const votingConfig = {
-  //       baselineVoteWeightScaledFactor: new anchor.BN(1e9),
-  //       maxExtraLockupVoteWeightScaledFactor: new anchor.BN(0),
-  //       lockupSaturationSecs: new anchor.BN(0), // zero value
-  //     };
+      const votingConfig = {
+        baselineVoteWeightScaledFactor: new anchor.BN(1e9),
+        maxExtraLockupVoteWeightScaledFactor: new anchor.BN(0),
+        lockupSaturationSecs: new anchor.BN(0), // zero value
+      };
 
-  //     await assertThrowsAnchorError('LockupSaturationMustBePositive', async () => {
-  //       await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig);
-  //     });
-  //   });
+      await assertThrowsAnchorError('LockupSaturationMustBePositive', async () => {
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, votingConfig);
+      });
+    });
 
-  //   it("with_zero_node_security_deposit_should_fail", async () => {
-  //     const realmAuthority = await newSigner();
-  //     let [mint, councilMint, realm] = await createRealm(realmAuthority);
+    it("with_zero_node_security_deposit_should_fail", async () => {
+      const realmAuthority = await newSigner();
+      let [mint, councilMint, realm] = await createRealm(realmAuthority);
 
-  //     const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
-  //     const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
+      const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
+      const [registrar, bump] = anchor.web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
 
-  //     const vault = getAssociatedTokenAddressSync(mint, registrar, true);
-  //     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
-  //     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+      const vault = getAssociatedTokenAddressSync(mint, registrar, true);
+      const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+      const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
-  //     const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
-  //     const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
-  //     const depositConfig = {
-  //       ordinaryDepositMinLockupDuration: lockupDayily(15),
-  //       nodeDepositLockupDuration: lockupMonthly(6),
-  //       nodeSecurityDeposit: new anchor.BN(0), // zero value
-  //     };
+      const depositConfig = {
+        ordinaryDepositMinLockupDuration: lockupDayily(15),
+        nodeDepositLockupDuration: lockupMonthly(6),
+        nodeSecurityDeposit: new anchor.BN(0), // zero value
+      };
 
-  //     await assertThrowsAnchorError('NodeSecurityDepositMustBePositive', async () => {
-  //       await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
-  //     });
-  //   });
-  // });
+      await assertThrowsAnchorError('NodeSecurityDepositMustBePositive', async () => {
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, realmAuthority, realmAuthority, undefined, depositConfig);
+      });
+    });
+  });
 
-  // describe("Realm verification", () => {
-  //   it("with_incorrect_realm_authority_should_fail", async () => {
-  //     const realmAuthority = await newSigner();
-  //     let [mint, councilMint, realm] = await createRealm(realmAuthority);
+  describe("Realm verification", () => {
+    it("with_incorrect_realm_authority_should_fail", async () => {
+      const realmAuthority = await newSigner();
+      let [mint, councilMint, realm] = await createRealm(realmAuthority);
 
-  //     const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
-  //     const [registrar, bump] = web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
+      const seeds = [realm.toBytes(), Buffer.from("registrar"), mint.toBytes()];
+      const [registrar, bump] = web3.PublicKey.findProgramAddressSync(seeds, VSR_PROGRAM.programId);
 
-  //     const vault = getAssociatedTokenAddressSync(mint, registrar, true);
-  //     const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
-  //     const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
+      const vault = getAssociatedTokenAddressSync(mint, registrar, true);
+      const circuitBreakerSeeds = [Buffer.from("account_windowed_breaker"), vault.toBytes()];
+      const [circuitBreaker, circuitBreakerBump] = anchor.web3.PublicKey.findProgramAddressSync(circuitBreakerSeeds, CIRCUIT_BREAKER_PROGRAM.programId);
 
-  //     const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
-  //     const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
+      const maxVoterWeightRecordSeeds = [realm.toBytes(), Buffer.from("max-voter-weight-record"), mint.toBytes()];
+      const [maxVoterWeightRecord, maxVoterWeightRecordBump] = anchor.web3.PublicKey.findProgramAddressSync(maxVoterWeightRecordSeeds, VSR_PROGRAM.programId);
 
-  //     const invalidRealmAuthority = await newSigner();
-  //     await assertThrowsAnchorError('InvalidRealmAuthority', async () => {
-  //       await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, invalidRealmAuthority, realmAuthority);
-  //     })
-  //   });
+      const invalidRealmAuthority = await newSigner();
+      await assertThrowsAnchorError('InvalidRealmAuthority', async () => {
+        await createRegistrar(bump, registrar, vault, circuitBreaker, maxVoterWeightRecord, realm, mint, invalidRealmAuthority, realmAuthority);
+      })
+    });
 
-  // });
+  });
 
   it("verify_registrar_data", async () => {
     const realmAuthority = await newSigner();

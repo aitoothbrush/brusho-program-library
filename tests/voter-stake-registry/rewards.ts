@@ -68,7 +68,7 @@ describe("rewards!", () => {
 
         await assertThrowsAnchorError('ConstraintSeeds', async () => {
             await VSR_PROGRAM.methods
-                .claimReward()
+                .claimReward(null)
                 .accounts({
                     registrar: invalidRegistrar,
                     voter,
@@ -94,7 +94,7 @@ describe("rewards!", () => {
 
         await assertThrowsAnchorError('ConstraintSeeds', async () => {
             await VSR_PROGRAM.methods
-                .claimReward()
+                .claimReward(null)
                 .accounts({
                     registrar: registrar,
                     voter,
@@ -115,23 +115,19 @@ describe("rewards!", () => {
         );
     });
 
-    it("verify_claim_reward", async () => {
+    it("with_insufficient_funds_in_vault_should_fail", async () => {
         const depositEntryIndex = 3;
         await deposit(depositEntryIndex, lockupDayily(15));
 
         let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
-        let prevRewardAccrualTs = registrarData.rewardAccrualTs;
-        let prevRewardIndex = registrarData.rewardIndex;
 
         // fastup 1 day
         await fastup(registrar, authority, SECS_PER_DAY, "confirmed");
 
-        const destinationTokenAccount = await newTokenAccount(mint, await newSigner());
-
         // 0x1 represents TokenError::InsufficientFunds
         await assertThrowsSendTransactionError('custom program error: 0x1', async () => {
             await VSR_PROGRAM.methods
-                .claimReward()
+                .claimReward(null)
                 .accounts({
                     registrar,
                     voter,
@@ -146,12 +142,36 @@ describe("rewards!", () => {
             (anchorErr) => { },
             false
         );
+    });
 
-
+    it("verify_claim_reward", async () => {
         // deposit tokens to vault
         await mintTokenToAccount(mint, authority, registrarVault, new anchor.BN(1e10));
+
+        const destinationTokenAccount = await newTokenAccount(mint, await newSigner());
+        let registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
+        let prevRewardAccrualTs = registrarData.rewardAccrualTs;
+        let prevRewardIndex = registrarData.rewardIndex;
+
+        // fastup 1 day
+        await fastup(registrar, authority, SECS_PER_DAY, "confirmed");
+
+        // estimate rewards
+        const logVoterInfoResp = await VSR_PROGRAM.methods
+            .logVoterInfo()
+            .accounts({
+                registrar,
+                voter,
+            })
+            .signers([])
+            .simulate()
+
+        const voterInfoData = logVoterInfoResp.events[0].data;
+        const estimatedRewards = voterInfoData.rewardAmount as anchor.BN;
+        const claimAmount = estimatedRewards.subn(1);
+
         let txId = await VSR_PROGRAM.methods
-            .claimReward()
+            .claimReward(claimAmount)
             .accounts({
                 registrar,
                 voter,
@@ -164,7 +184,7 @@ describe("rewards!", () => {
             .rpc({ commitment: "confirmed" });
 
         let voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
-        assert.isTrue(voterData.rewardClaimableAmount.eqn(0));
+        assert.isTrue(voterData.rewardClaimableAmount.gten(1));
 
         // verify registrar data
         registrarData = await VSR_PROGRAM.account.registrar.fetch(registrar, "confirmed");
@@ -178,8 +198,27 @@ describe("rewards!", () => {
         assert.equal(registrarData.rewardIndex.toString(), prevRewardIndex.add(rewardIndexDelta).toString());
 
         let destinationTokenAccountData = await getTokenAccount(destinationTokenAccount);
-        let expectRewardAmount = rewardIndexDelta.mul(depositAmount).div(EXP_SCALE);
-        assert.equal(expectRewardAmount.toString(), destinationTokenAccountData.amount.toString())
+        assert.equal(claimAmount.toString(), destinationTokenAccountData.amount.toString())
+
+        // claim remains
+        await VSR_PROGRAM.methods
+            .claimReward(null)
+            .accounts({
+                registrar,
+                voter,
+                voterAuthority: voterAuthority.publicKey,
+                destination: destinationTokenAccount,
+                vault: registrarVault,
+                circuitBreaker,
+                circuitBreakerProgram: CIRCUIT_BREAKER_PROGRAM.programId
+            }).signers([voterAuthority])
+            .rpc({ commitment: "confirmed" });
+
+        voterData = await VSR_PROGRAM.account.voter.fetch(voter, "confirmed");
+        assert.isTrue(voterData.rewardClaimableAmount.eqn(0));
+
+        destinationTokenAccountData = await getTokenAccount(destinationTokenAccount);
+        assert.isTrue(new anchor.BN(destinationTokenAccountData.amount.toString()).gte(estimatedRewards));
     });
 
     it("claim_reward_later_again_should_work", async () => {
@@ -193,7 +232,7 @@ describe("rewards!", () => {
         const destinationTokenAccount = await newTokenAccount(mint, await newSigner());
 
         let txId = await VSR_PROGRAM.methods
-            .claimReward()
+            .claimReward(null)
             .accounts({
                 registrar,
                 voter,
@@ -247,7 +286,7 @@ describe("rewards!", () => {
 
         await assertThrowsAnchorError('CircuitBreakerTriggered', async () => {
             await VSR_PROGRAM.methods
-                .claimReward()
+                .claimReward(null)
                 .accounts({
                     registrar,
                     voter,

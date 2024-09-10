@@ -54,4 +54,6 @@ pub enum VsrError {
     ActiveDepositEntryIndex,
     #[msg("")]
     InvalidLockupDuration,
+    #[msg("")]
+    InsufficientClaimableRewards,
 }

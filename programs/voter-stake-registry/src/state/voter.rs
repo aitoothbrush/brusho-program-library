@@ -209,13 +209,19 @@ impl Voter {
         Ok(d.get_amount_deposited_native())
     }
 
-    pub fn claim_reward(&mut self, curr_ts: i64, registrar: &mut Registrar) -> Result<u64> {
+    pub fn claim_reward(&mut self, curr_ts: i64, amount: Option<u64>, registrar: &mut Registrar) -> Result<u64> {
         self.accrue_rewards(curr_ts, registrar)?;
 
-        let claimed_amount = self.reward_claimable_amount;
-        self.reward_claimable_amount = 0;
+        let claim_amount = amount.unwrap_or(self.reward_claimable_amount);
+        require_gte!(
+            self.reward_claimable_amount,
+            claim_amount,
+            VsrError::InsufficientClaimableRewards
+        );
 
-        Ok(claimed_amount)
+        self.reward_claimable_amount = self.reward_claimable_amount.checked_sub(claim_amount).unwrap();
+
+        Ok(claim_amount)
     }
 
     /// The full vote weight available to the voter
@@ -586,13 +592,18 @@ mod tests {
         // Increase registrar_data.reward_index
         registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
         assert_eq!(
-            voter.claim_reward(0, &mut registrar_data),
+            voter.claim_reward(0, Some(10), &mut registrar_data),
             Err(error!(VsrError::InternalProgramError)) as Result<u64>
         );
-        let claimed_amount = voter.claim_reward(1, &mut registrar_data)?;
-        assert_eq!(claimed_amount, 20);
-        assert_eq!(voter.reward_claimable_amount, 0);
+        let mut claimed_amount = voter.claim_reward(1, Some(10), &mut registrar_data)?;
+        assert_eq!(claimed_amount, 10);
+        assert_eq!(voter.reward_claimable_amount, 10);
         assert_eq!(voter.reward_index.as_u128(), registrar_data.reward_index.as_u128());
+
+        // claim remains
+        claimed_amount = voter.claim_reward(1, None, &mut registrar_data)?;
+        assert_eq!(claimed_amount, 10);
+        assert_eq!(voter.reward_claimable_amount, 0);
 
         // Increase registrar_data.reward_index
         registrar_data.reward_index = registrar_data.reward_index.add(u128::new_with_denom(1, 10));
