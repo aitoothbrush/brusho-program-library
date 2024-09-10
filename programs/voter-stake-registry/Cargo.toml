@@ -3,7 +3,7 @@ name = "voter-stake-registry"
 version = "0.1.0"
 description = "Brusho voter weight plugin for spl-governance"
 license = "GPL-3.0-or-later"
-homepage = "https://github.com/helium/helium-program-library"
+homepage = "https://github.com/aitoothbrush/brusho-program-library"
 edition = "2021"
 
 [lib]
