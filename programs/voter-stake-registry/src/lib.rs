@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use instructions::*;
 use state::*;
-use circuit_breaker::WindowedCircuitBreakerConfigV0;
+use crate::circuit_breaker::WindowedCircuitBreakerConfigV0;
 
 pub mod error;
 pub mod events;
