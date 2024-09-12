@@ -144,7 +144,7 @@ impl Voter {
         index: u8,
         curr_ts: i64,
         lockup: Lockup,
-        registrar: &mut Registrar,
+        registrar: &Registrar,
     ) -> Result<()> {
         self.accrue_rewards(curr_ts, registrar)?;
 
@@ -199,7 +199,7 @@ impl Voter {
         index: u8,
         curr_ts: i64,
         amount: u64,
-        registrar: &mut Registrar,
+        registrar: &Registrar,
     ) -> Result<u64> {
         self.accrue_rewards(curr_ts, registrar)?;
 
@@ -209,7 +209,7 @@ impl Voter {
         Ok(d.get_amount_deposited_native())
     }
 
-    pub fn claim_reward(&mut self, curr_ts: i64, amount: Option<u64>, registrar: &mut Registrar) -> Result<u64> {
+    pub fn claim_reward(&mut self, curr_ts: i64, amount: Option<u64>, registrar: &Registrar) -> Result<u64> {
         self.accrue_rewards(curr_ts, registrar)?;
 
         let claim_amount = amount.unwrap_or(self.reward_claimable_amount);
