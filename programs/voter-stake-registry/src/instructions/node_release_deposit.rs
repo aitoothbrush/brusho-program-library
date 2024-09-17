@@ -40,7 +40,7 @@ pub fn node_release_deposit(
     let curr_ts = registrar.clock_unix_timestamp();
     registrar.accrue_rewards(curr_ts);
 
-    let node_security_deposit = d_entry.get_amount_deposited_native();
+    let amount_deposited = d_entry.get_amount_deposited_native();
     let lockup = d_entry.get_lockup();
     let lockup_kind = lockup.kind;
     if let LockupKindKind::Constant = lockup_kind.kind {
@@ -61,13 +61,15 @@ pub fn node_release_deposit(
         voter.deposit(
             target_deposit_entry_index,
             curr_ts,
-            node_security_deposit,
+            amount_deposited,
             registrar,
         )?;
 
         emit!(NodeReleaseDepositEvent {
             voter: voter.get_voter_authority(),
+            deposit_entry_index: NODE_DEPOSIT_ENTRY_INDEX,
             target_deposit_entry_index,
+            amount: amount_deposited
         });
 
         Ok(())

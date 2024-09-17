@@ -14,7 +14,9 @@ pub struct NodeDepositEvent {
 pub struct NodeReleaseDepositEvent {
     // voter authority address
     pub voter: Pubkey,
+    pub deposit_entry_index: u8,
     pub target_deposit_entry_index: u8,
+    pub amount: u64,
 }
 
 #[event]
