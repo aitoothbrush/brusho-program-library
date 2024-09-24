@@ -18,7 +18,7 @@ pub fn log_voter_info(ctx: Context<LogVoterInfo>) -> Result<()> {
     let voter = &ctx.accounts.voter.load()?;
 
     let curr_ts = registrar.clock_unix_timestamp();
-    let mut deposit_entries: [Option<DepositEntryInfo>; 10] = Default::default();
+    let mut deposit_entries: [Option<DepositEntryInfo>; VOTER_DEPOSIT_ENTRY_COUNT] = Default::default();
     for (index, d_entry) in voter.get_deposits().iter().enumerate() {
         if d_entry.is_active() {
             let lockup = &d_entry.get_lockup();

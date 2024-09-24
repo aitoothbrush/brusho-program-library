@@ -3,12 +3,15 @@ use crate::state::registrar::Registrar;
 use crate::{error::*, u128, Lockup};
 use anchor_lang::prelude::*;
 
+/// The count of deposit entries per voter
+pub const VOTER_DEPOSIT_ENTRY_COUNT: usize = 16;
+
 /// User account for minting voting rights.
 #[account(zero_copy)]
 pub struct Voter {
     voter_authority: Pubkey,
     registrar: Pubkey,
-    deposits: [DepositEntry; 16],
+    deposits: [DepositEntry; VOTER_DEPOSIT_ENTRY_COUNT],
 
     /// Global reward_index as of the most recent balance-changing action
     reward_index: u128,
@@ -20,7 +23,7 @@ pub struct Voter {
     reserved1: [u8; 6],
     reserved2: [u64; 8],
 }
-const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + 16 * 88 + 16 + 8 + 1 + 1 + 6 + 64);
+const_assert!(std::mem::size_of::<Voter>() == 2 * 32 + VOTER_DEPOSIT_ENTRY_COUNT * 88 + 16 + 8 + 1 + 1 + 6 + 64);
 const_assert!(std::mem::size_of::<Voter>() % 8 == 0);
 
 /// impl: factory function and getters

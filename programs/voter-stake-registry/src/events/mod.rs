@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::Lockup;
+use crate::{Lockup, VOTER_DEPOSIT_ENTRY_COUNT};
 
 #[event]
 pub struct NodeDepositEvent {
@@ -61,7 +61,7 @@ pub struct VoterInfo {
     /// Accumulated reward amount
     pub reward_amount: u64,
     /// DepositEntry info array
-    pub deposit_entries: [Option<DepositEntryInfo>; 10],
+    pub deposit_entries: [Option<DepositEntryInfo>; VOTER_DEPOSIT_ENTRY_COUNT],
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
