@@ -14,7 +14,7 @@ pub mod circuit_breaker;
 extern crate static_assertions;
 
 // The program address.
-declare_id!("Bvsr2wYoKA1btgu3DGUFZ4KKtdwWMAQA5vvd4FKRPi8T");
+declare_id!("bvsrR3rN4P6mJ5KthtyeawC2rBeAZ2suTUkn2zmDbWg");
 
 /// # Introduction
 ///
