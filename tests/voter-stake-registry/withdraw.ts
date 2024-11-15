@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
 
-import { assertThrowsAnchorError, CONNECTION, createRealm, createRegistrar, createVoter, defaultDepositConfig, defaultVotingConfig, delay, fastup, lockupDayily, LockupTimeDuration, lockupTimeDurationSeconds, mintTokenToAccount, newSigner, newTokenAccount, VSR_PROGRAM } from "./helper";
+import { assertThrowsAnchorError, CONNECTION, createRealm, createRegistrar, createVoter, defaultDepositConfig, defaultVotingConfig, delay, fastup, lockupDayily, LockupTimeDuration, lockupTimeDurationSeconds, mintTokenToAccount, newSigner, newTokenAccount, VSR_PROGRAM } from "../helper";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { assert } from "chai";
 
