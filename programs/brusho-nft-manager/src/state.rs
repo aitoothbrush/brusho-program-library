@@ -46,7 +46,7 @@ macro_rules! brush_no_to_asset_seeds {
     &[
       "brush_no_to_asset".as_bytes(),
       $brush_no_to_asset.realm.as_ref(),
-      &anchor_lang::solana_program::hash::hash(&$brush_no_to_asset.brush_no.as_bytes()).to_bytes(),
+      $brush_no_to_asset.brush_no.as_bytes(),
       &[$brush_no_to_asset.bump],
     ]
   };

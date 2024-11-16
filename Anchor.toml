@@ -7,7 +7,7 @@ skip-lint = false
 [programs.localnet]
 voter_stake_registry = "Bvsr2wYoKA1btgu3DGUFZ4KKtdwWMAQA5vvd4FKRPi8T"
 circuit-breaker = "CirC9HGGQgTk8XA8ARBgXkaBDDt3Jejs3F8ezTNKp8Q"
-brusho-nft-manager = "bnm35f1Uyvgi5SN5mtp1bncJBXtHX6WYxVUFsp9VPAw"
+brusho-nft-manager = "BrMwmWYxuAiCMJXf1yPAsp5WZ46e6ZgYC3c8gmkRq3nE"
 
 [workspace]
 members = [

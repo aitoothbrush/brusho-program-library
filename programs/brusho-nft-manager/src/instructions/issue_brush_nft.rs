@@ -1,7 +1,6 @@
 use crate::state::*;
 use account_compression_cpi::{program::SplAccountCompression, Noop};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::hash::hash;
 use anchor_spl::token::Mint;
 use bubblegum_cpi::{
     cpi::{accounts::MintToCollectionV1, mint_to_collection_v1},
@@ -12,8 +11,8 @@ use bubblegum_cpi::{
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct IssueBrushNftArgs {
-    pub brush_pubkey: Pubkey,
     pub brush_no: String,
+    pub brush_pubkey: Pubkey,
     pub metadata_url: String,
 }
 
@@ -62,7 +61,7 @@ pub struct IssueBrushNft<'info> {
         seeds = [
             "brush_no_to_asset".as_bytes(),
             realm.key().as_ref(),
-            &hash(&args.brush_no.as_bytes()).to_bytes()
+            args.brush_no.as_bytes(),
         ],
         bump
     )]
@@ -166,13 +165,13 @@ pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> 
         seller_fee_basis_points: 0,
     };
 
-    let top_creator_signer_seeds: &[&[&[u8]]] = &[&[
+    let top_creator_signer_seeds: &[&[u8]] = &[
         b"top_creator",
         ctx.accounts.realm.to_account_info().key.as_ref(),
         &[ctx.bumps.top_creator],
-    ]];
+    ];
 
-    let maker_signer_seeds: &[&[&[u8]]] = &[maker_seeds!(maker)];
+    let maker_signer_seeds: &[&[u8]] = maker_seeds!(maker);
     let mut creator = ctx.accounts.top_creator.to_account_info();
     creator.is_signer = true;
     let mut brush_no_to_asset_creator = ctx.accounts.brush_no_to_asset.to_account_info();
@@ -184,8 +183,8 @@ pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> 
             .mint_to_collection_ctx()
             .with_remaining_accounts(vec![creator, brush_no_to_asset_creator])
             .with_signer(&[
-                maker_signer_seeds[0],
-                top_creator_signer_seeds[0],
+                maker_signer_seeds,
+                top_creator_signer_seeds,
                 brush_no_to_asset_signer_seeds,
             ]),
         metadata,
