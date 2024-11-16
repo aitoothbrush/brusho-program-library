@@ -24,6 +24,6 @@ overflow-checks = true
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 mpl-token-metadata = { workspace = true }
-account-compression-cpi = { rev = "b1f82333f192be622b0b8e82468d22572e137d40", git = "https://github.com/Max2405071139/account-compression-anchor-gen", features = ["cpi"]}
-bubblegum-cpi = { rev = "b1f82333f192be622b0b8e82468d22572e137d40", git = "https://github.com/Max2405071139/account-compression-anchor-gen", features = ["cpi"]}
-spl-governance = { rev = "0377e6452fef0c84148e2d4de6bef08dac7ca16e", git = "https://github.com/solana-labs/solana-program-library.git", version = "3.1.0", features = ["no-entrypoint"] }
+account-compression-cpi = { workspace = true }
+bubblegum-cpi = { workspace = true }
+spl-governance = { workspace = true }
