@@ -7,11 +7,13 @@ skip-lint = false
 [programs.localnet]
 voter_stake_registry = "Bvsr2wYoKA1btgu3DGUFZ4KKtdwWMAQA5vvd4FKRPi8T"
 circuit-breaker = "CirC9HGGQgTk8XA8ARBgXkaBDDt3Jejs3F8ezTNKp8Q"
+brusho-nft-manager = "bnm35f1Uyvgi5SN5mtp1bncJBXtHX6WYxVUFsp9VPAw"
 
 [workspace]
 members = [
   "programs/voter-stake-registry",
   "programs/circuit-breaker",
+  "programs/brusho-nft-manager",
 ]
 
 [registry]
@@ -31,3 +33,19 @@ url = "https://api.devnet.solana.com"
 [[test.genesis]]
 address = "GovernanceProgramTest1111111111111111111111"
 program = "./tests-genesis/governance.so"
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "./tests-genesis/token_metadata.so"
+
+[[test.genesis]]
+address = "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV"
+program = "./tests-genesis/noop.so"
+
+[[test.genesis]]
+address = "BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY"
+program = "./tests-genesis/bubblegum.so"
+
+[[test.genesis]]
+address = "cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK"
+program = "./tests-genesis/account_compression.so"

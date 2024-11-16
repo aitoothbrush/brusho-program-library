@@ -1,19 +1,25 @@
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
 import { SendTransactionError, Commitment, Connection, PublicKey, Keypair, TransactionInstruction, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
-import { VoterStakeRegistry } from "../../target/types/voter_stake_registry";
-import { CircuitBreaker } from "../../target/types/circuit_breaker";
+import { VoterStakeRegistry } from "../target/types/voter_stake_registry";
+import { CircuitBreaker } from "../target/types/circuit_breaker";
+import { BrushoNftManager } from "../target/types/brusho_nft_manager";
 import { assert } from "chai";
-import { createMint, mintTo, getAccount, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { createMint, mintTo, getAccount, getMint as __getMint, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MintMaxVoteWeightSource, MintMaxVoteWeightSourceType, withCreateRealm, withCreateTokenOwnerRecord } from "@solana/spl-governance";
 
 // Configure the client to use the local cluster.
 anchor.setProvider(anchor.AnchorProvider.env());
 
 export const GOV_PROGRAM_ID = new PublicKey("GovernanceProgramTest1111111111111111111111");
+export const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+export const MPL_BUBBLEGUM_PROGRAM_ID = new PublicKey("BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY");
+export const NOOP_PROGRAM_ID = new PublicKey("noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV");
+export const ACCOUNT_COMPRESSION_PROGRAM_ID = new PublicKey("cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK");
 
 export const VSR_PROGRAM = anchor.workspace.VoterStakeRegistry as Program<VoterStakeRegistry>;
 export const CIRCUIT_BREAKER_PROGRAM = anchor.workspace.CircuitBreaker as Program<CircuitBreaker>;
+export const BRUSHO_NFT_MANAGER_PROGRAM = anchor.workspace.BrushoNftManager as Program<BrushoNftManager>;
 
 export const CONNECTION: Connection = anchor.getProvider().connection;
 
@@ -116,6 +122,10 @@ export async function mintTokenToWallet(mint: PublicKey, mintAuthority: Keypair,
   const receiverAccount = await getOrCreateAssociatedTokenAccount(CONNECTION, mintAuthority, mint, receiverWallet);
   await mintTo(CONNECTION, mintAuthority, mint, receiverAccount.address, mintAuthority, amount.toNumber())
   return receiverAccount.address;
+}
+
+export async function getMint(mint: PublicKey) {
+  return await __getMint(CONNECTION, mint);
 }
 
 export async function mintTokenToAccount(mint: PublicKey, mintAuthority: Keypair, tokenAccount: PublicKey, amount: anchor.BN) {
