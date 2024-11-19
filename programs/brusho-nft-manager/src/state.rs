@@ -34,7 +34,6 @@ pub use maker_seeds;
 pub struct BrushNoToAsset {
     pub realm: Pubkey,
     pub asset: Pubkey,
-    pub brush_pubkey: Pubkey,
     pub brush_no: String,
     pub bump: u8,
 }

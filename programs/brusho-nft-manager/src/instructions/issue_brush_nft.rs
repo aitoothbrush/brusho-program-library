@@ -12,7 +12,6 @@ use bubblegum_cpi::{
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct IssueBrushNftArgs {
     pub brush_no: String,
-    pub brush_pubkey: Pubkey,
     pub metadata_url: String,
 }
 
@@ -128,7 +127,6 @@ pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> 
     ctx.accounts.brush_no_to_asset.set_inner(BrushNoToAsset {
         asset: asset_id,
         realm: ctx.accounts.realm.key(),
-        brush_pubkey: args.brush_pubkey.clone(),
         brush_no: args.brush_no.clone(),
         bump: ctx.bumps.brush_no_to_asset,
     });
