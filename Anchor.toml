@@ -8,12 +8,14 @@ skip-lint = false
 voter_stake_registry = "Bvsr2wYoKA1btgu3DGUFZ4KKtdwWMAQA5vvd4FKRPi8T"
 circuit-breaker = "CirC9HGGQgTk8XA8ARBgXkaBDDt3Jejs3F8ezTNKp8Q"
 brusho-nft-manager = "BrMwmWYxuAiCMJXf1yPAsp5WZ46e6ZgYC3c8gmkRq3nE"
+reward-distributor = "bteowJth3P2odCH9Xx3kWiAAmXDuxhJb7Fq44TUgHcr"
 
 [workspace]
 members = [
   "programs/voter-stake-registry",
   "programs/circuit-breaker",
   "programs/brusho-nft-manager",
+  "programs/reward-distributor",
 ]
 
 [registry]

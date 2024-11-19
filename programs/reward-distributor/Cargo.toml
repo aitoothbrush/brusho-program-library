@@ -1,0 +1,32 @@
+[package]
+name = "reward-distributor"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "reward_distributor"
+
+[features]
+devnet = []
+no-genesis = []
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[profile.release]
+overflow-checks = true
+
+[dependencies]
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+mpl-token-metadata = { workspace = true }
+account-compression-cpi = { workspace = true }
+bubblegum-cpi = { workspace = true }
+spl-governance = { workspace = true }
+circuit-breaker = { workspace = true }
+bytemuck = "1.12.3"
+spl-concurrent-merkle-tree = "0.2.0"

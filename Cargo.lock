@@ -3220,6 +3220,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "reward-distributor"
+version = "0.1.0"
+dependencies = [
+ "account-compression-cpi",
+ "anchor-lang",
+ "anchor-spl",
+ "bubblegum-cpi",
+ "bytemuck",
+ "circuit-breaker",
+ "mpl-token-metadata",
+ "spl-concurrent-merkle-tree",
+ "spl-governance",
+]
+
+[[package]]
 name = "ring"
 version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4723,6 +4738,17 @@ dependencies = [
  "solana-program",
  "spl-token 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spl-token-2022 0.9.0",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-concurrent-merkle-tree"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "141eaea58588beae81b71d101373a53f096737739873de42d6b1368bc2b8fc30"
+dependencies = [
+ "bytemuck",
+ "solana-program",
  "thiserror",
 ]
 
