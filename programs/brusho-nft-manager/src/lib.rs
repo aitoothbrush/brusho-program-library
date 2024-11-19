@@ -29,4 +29,8 @@ pub mod brusho_nft_manager {
     pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> Result<()> {
         instructions::issue_brush_nft(ctx, args)
     }
+
+    pub fn update_issuing_authority(ctx: Context<UpdateIssuingAuthority>, args: UpdateIssuingAuthorityArgs) -> Result<()> {
+        instructions::update_issuing_authority(ctx, args)
+    }
 }
