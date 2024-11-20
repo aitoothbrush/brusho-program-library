@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::{error::BnmError, state::*};
 use account_compression_cpi::{program::SplAccountCompression, Noop};
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
@@ -22,6 +22,7 @@ pub struct IssueBrushNft<'info> {
     pub payer: Signer<'info>,
     pub issuing_authority: Signer<'info>,
     pub collection: Box<Account<'info, Mint>>,
+
     /// CHECK: Handled by cpi
     #[account(
         mut,
@@ -30,6 +31,7 @@ pub struct IssueBrushNft<'info> {
         bump,
     )]
     pub collection_metadata: UncheckedAccount<'info>,
+
     /// CHECK: Handled By cpi account
     #[account(
         seeds = ["metadata".as_bytes(), token_metadata_program.key().as_ref(), collection.key().as_ref(), "edition".as_bytes()],
@@ -37,12 +39,13 @@ pub struct IssueBrushNft<'info> {
         bump,
     )]
     pub collection_master_edition: UncheckedAccount<'info>,
+
     #[account(
-        mut,
         has_one = issuing_authority,
         has_one = collection,
         has_one = merkle_tree,
         has_one = realm,
+        constraint = maker.is_active == true @ BnmError::InactiveMaker,
     )]
     pub maker: Box<Account<'info, Maker>>,
     /// CHECK: via maker
