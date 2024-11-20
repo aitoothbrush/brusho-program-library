@@ -20,7 +20,6 @@ describe("issue_brush_nft!", () => {
     it("verify_data", async () => {
         const issueNFTArgs = {
             brushNo: "0001-00222222-00001",
-            brushPubkey: Keypair.generate().publicKey,
             metadataUrl: "http://abcd.xyz/nft/metadata/0001-00222222-00001",
         };
         const recipient = Keypair.generate().publicKey;
@@ -71,7 +70,6 @@ describe("issue_brush_nft!", () => {
         // console.log(JSON.stringify(brushNoToAssetData, undefined, 2))
 
         assert.equal(realm.toString(), brushNoToAssetData.realm.toString());
-        assert.equal(issueNFTArgs.brushPubkey.toString(), brushNoToAssetData.brushPubkey.toString());
         assert.equal(issueNFTArgs.brushNo, brushNoToAssetData.brushNo);
         assert.equal(brushNoToAssetBump, brushNoToAssetData.bump);
     });
