@@ -8,4 +8,6 @@ pub enum BnmError {
     InvaliMetadataUrlLength,
     #[msg("")]
     InvalidRealmAuthority,
+    #[msg("")]
+    InactiveMaker,
 }

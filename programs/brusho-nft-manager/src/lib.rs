@@ -33,4 +33,8 @@ pub mod brusho_nft_manager {
     pub fn update_issuing_authority(ctx: Context<UpdateIssuingAuthority>, args: UpdateIssuingAuthorityArgs) -> Result<()> {
         instructions::update_issuing_authority(ctx, args)
     }
+
+    pub fn update_maker(ctx: Context<UpdateMaker>, args: UpdateMaker) -> Result<()> {
+        instructions::update_maker(ctx, args)
+    }
 }
