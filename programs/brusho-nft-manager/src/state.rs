@@ -13,6 +13,8 @@ pub struct Maker {
     pub is_active: bool,
     pub bump: u8,
     pub collection_bump: u8,
+    pub reserved1: [u8; 5],
+    pub reserved2: [u64; 8],
 }
 
 #[macro_export]

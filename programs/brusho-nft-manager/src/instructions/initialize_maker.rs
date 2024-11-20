@@ -28,7 +28,7 @@ pub struct InitializeMaker<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + 60 + std::mem::size_of::<Maker>(),
+        space = 8 + std::mem::size_of::<Maker>() + args.name.len(),
         seeds = ["maker".as_bytes(), realm.key().as_ref(), args.name.as_bytes()],
         bump,
     )]
@@ -125,6 +125,8 @@ pub fn initialize_maker(ctx: Context<InitializeMaker>, args: InitializeMakerArgs
         is_active: true,
         bump: ctx.bumps.maker,
         collection_bump: ctx.bumps.collection,
+        reserved1: [0; 5],
+        reserved2: [0; 8],
     };
     let signer_seeds: &[&[&[u8]]] = &[maker_seeds!(&maker)];
 
