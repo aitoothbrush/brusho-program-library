@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 
 pub mod canopy;
+pub mod circuit_breaker;
 pub mod compressed_nfts;
 pub mod error;
 pub mod instructions;
