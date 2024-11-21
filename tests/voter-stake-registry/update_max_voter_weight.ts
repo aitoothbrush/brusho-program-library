@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
 
-import { CIRCUIT_BREAKER_PROGRAM, createRealm, defaultDepositConfig, defaultVotingConfig, DepositConfig, GOV_PROGRAM_ID, mintTokenToWallet, newSigner, SECS_PER_DAY, VotingConfig, VSR_PROGRAM } from "./helper";
+import { CIRCUIT_BREAKER_PROGRAM, createRealm, defaultDepositConfig, defaultVotingConfig, DepositConfig, GOV_PROGRAM_ID, mintTokenToWallet, newSigner, SECS_PER_DAY, VotingConfig, VSR_PROGRAM } from "../helper";
 import { assert } from "chai";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { getMaxVoterWeightRecord } from "@solana/spl-governance";

@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
 
-import { assertThrowsAnchorError, createRealm, createRegistrar, defaultDepositConfig, defaultVotingConfig, DepositConfig, GOV_PROGRAM_ID, lockupDayily, lockupMonthly, newMint, newSigner, VotingConfig, VSR_PROGRAM } from "./helper";
+import { assertThrowsAnchorError, createRealm, createRegistrar, defaultDepositConfig, defaultVotingConfig, lockupDayily, lockupMonthly, newSigner, VSR_PROGRAM } from "../helper";
 import { assert } from "chai";
 
 describe("update_deposit_config!", () => {

@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { web3 } from "@coral-xyz/anchor";
 
-import { assertThrowsAnchorError, CONNECTION, createRealm, createRegistrar, defaultDepositConfig, defaultVotingConfig, newSigner, VSR_PROGRAM } from "./helper";
+import { assertThrowsAnchorError, CONNECTION, createRealm, createRegistrar, defaultDepositConfig, defaultVotingConfig, newSigner, VSR_PROGRAM } from "../helper";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { assert } from "chai";
 import { getVoterWeightRecord } from "@solana/spl-governance";
