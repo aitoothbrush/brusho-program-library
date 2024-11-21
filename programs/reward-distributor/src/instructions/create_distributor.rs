@@ -3,13 +3,10 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
-use circuit_breaker::{
-    cpi::{accounts::InitializeAccountWindowedBreakerV0, initialize_account_windowed_breaker_v0},
-    CircuitBreaker, InitializeAccountWindowedBreakerArgsV0, WindowedCircuitBreakerConfigV0,
-};
+use circuit_breaker::{cpi::{accounts::InitializeAccountWindowedBreakerV0, initialize_account_windowed_breaker_v0}, CircuitBreaker, InitializeAccountWindowedBreakerArgsV0};
 use spl_governance::state::realm::get_realm_data;
 
-use crate::{error::RdError, state::Distributor};
+use crate::{circuit_breaker::WindowedCircuitBreakerConfigV0, error::RdError, state::Distributor};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct CreateDistributorArgs {
@@ -100,15 +97,15 @@ pub fn create_distributor(
                 system_program: ctx.accounts.system_program.to_account_info(),
             },
             &[&[
-                ctx.accounts.realm.key().as_ref(),
                 "distributor".as_ref(),
+                ctx.accounts.realm.key().as_ref(),
                 ctx.accounts.rewards_mint.key().as_ref(),
                 &[ctx.bumps.distributor],
             ]],
         ),
         InitializeAccountWindowedBreakerArgsV0 {
             authority: ctx.accounts.realm_authority.key(),
-            config: args.circuit_breaker_config,
+            config: args.circuit_breaker_config.into(),
             owner: ctx.accounts.distributor.key(),
         },
     )?;
