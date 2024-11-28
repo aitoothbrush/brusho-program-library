@@ -1,5 +1,5 @@
-use crate::state::*;
-use anchor_lang::{prelude::*, solana_program::system_program};
+use crate::{error::RdError, state::*};
+use anchor_lang::{prelude::*, system_program};
 
 pub fn close<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> Result<()> {
     // Transfer tokens from the account to the sol_destination.
@@ -14,27 +14,32 @@ pub fn close<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info
 
 #[derive(Accounts)]
 pub struct CloseCanopy<'info> {
-    #[account(mut)]
-    /// CHECK: Just receiving funds
-    pub refund: UncheckedAccount<'info>,
-
     #[account(
-      has_one = authority,
-      has_one = canopy
+        mut,
+        has_one = authority @ RdError::Authorization,
+        has_one = canopy_data,
     )]
-    pub distribution_tree: Box<Account<'info, DistributionTree>>,
+    pub canopy: Box<Account<'info, Canopy>>,
 
-    pub authority: Signer<'info>,
-
-    /// CHECK: Verified by has one
     #[account(mut)]
-    pub canopy: UncheckedAccount<'info>,
+    /// CHECK: see canopy constraints 
+    pub canopy_data: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn close_canopy(ctx: Context<CloseCanopy>) -> Result<()> {
     close(
-        ctx.accounts.canopy.to_account_info(),
-        ctx.accounts.refund.to_account_info(),
+        ctx.accounts.canopy_data.to_account_info(),
+        ctx.accounts.authority.to_account_info(),
     )?;
+
+    close(
+        ctx.accounts.canopy.to_account_info(),
+        ctx.accounts.authority.to_account_info(),
+    )?;
+
     Ok(())
 }

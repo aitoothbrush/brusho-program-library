@@ -3,13 +3,15 @@ use anchor_lang::prelude::*;
 #[error_code]
 pub enum RdError {
     #[msg("")]
+    Authorization,
+    #[msg("")]
     InvalidAsset,
     #[msg("")]
     InvalidProof,
     #[msg("")]
     InvalidRecipient,
     #[msg("")]
-    ExpiredPeriod,
+    AlreadyClaimedPeriod,
     #[msg("")]
     InvalidRealmAuthority,
     #[msg("")]
@@ -17,13 +19,13 @@ pub enum RdError {
     #[msg("")]
     IllegalPeriod,
     #[msg("")]
-    IllegalPeriodRewardsLimit,
+    InvalidDistributorName,
     #[msg("")]
-    IllegalCanopyData,
+    OraclesCountExceeds,
     #[msg("")]
-    SecurityControl,
+    CannotReportAtPresent,
     #[msg("")]
-    DistributionTreeIsInactive,
+    InvalidOracleReports,
     #[msg("")]
-    CannotSetCanopyForActiveDistributionTree,
+    DistributionTreeNotActivated,
 }

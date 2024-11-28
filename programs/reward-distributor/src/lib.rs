@@ -22,22 +22,16 @@ pub mod reward_distributor {
         instructions::create_distributor(ctx, args)
     }
 
-    pub fn create_distribution_tree(
-        ctx: Context<CreateDistributionTree>,
-        args: CreateDistributionTreeArgs,
-    ) -> Result<()> {
-        instructions::create_distribution_tree(ctx, args)
+    pub fn create_distribution_tree(ctx: Context<CreateDistributionTree>) -> Result<()> {
+        instructions::create_distribution_tree(ctx)
     }
 
-    pub fn set_canopy_data(ctx: Context<SetCanopyData>, args: SetCanopyDataArgs) -> Result<()> {
-        instructions::set_canopy_data(ctx, args)
+    pub fn report_oracle(ctx: Context<ReportOracle>, args: ReportOracleArgs) -> Result<()> {
+        instructions::report_oracle(ctx, args)
     }
 
-    pub fn activate_distribution_tree(
-        ctx: Context<ActivateDistributionTree>,
-        args: ActivateDistributionTreeArgs,
-    ) -> Result<()> {
-        instructions::activate_distribution_tree(ctx, args)
+    pub fn activate_distribution_tree(ctx: Context<ActivateDistributionTree>) -> Result<()> {
+        instructions::activate_distribution_tree(ctx)
     }
 
     pub fn claim_rewards<'info>(
@@ -47,18 +41,19 @@ pub mod reward_distributor {
         instructions::claim_rewards(ctx, args)
     }
 
-    pub fn update_distribution_tree(
-        ctx: Context<UpdateDistributionTree>,
-        args: UpdateDistributionTreeArgs,
-    ) -> Result<()> {
-        instructions::update_distribution_tree(ctx, args)
-    }
-
     pub fn update_distributor(
         ctx: Context<UpdateDistributor>,
         args: UpdateDistributorArgs,
     ) -> Result<()> {
         instructions::update_distributor(ctx, args)
+    }
+
+    pub fn create_canopy(ctx: Context<CreateCanopy>) -> Result<()> {
+        instructions::create_canopy(ctx)
+    }
+
+    pub fn set_canopy_data(ctx: Context<SetCanopyData>, args: SetCanopyDataArgs) -> Result<()> {
+        instructions::set_canopy_data(ctx, args)
     }
 
     pub fn close_canopy(ctx: Context<CloseCanopy>) -> Result<()> {

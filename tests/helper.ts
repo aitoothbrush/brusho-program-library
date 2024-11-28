@@ -4,6 +4,7 @@ import { SendTransactionError, Commitment, Connection, PublicKey, Keypair, Trans
 import { VoterStakeRegistry } from "../target/types/voter_stake_registry";
 import { CircuitBreaker } from "../target/types/circuit_breaker";
 import { BrushoNftManager } from "../target/types/brusho_nft_manager";
+import { RewardDistributor } from "../target/types/reward_distributor";
 import { assert } from "chai";
 import { createMint, mintTo, getAccount, getMint as __getMint, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MintMaxVoteWeightSource, MintMaxVoteWeightSourceType, withCreateRealm, withCreateTokenOwnerRecord } from "@solana/spl-governance";
@@ -20,6 +21,7 @@ export const ACCOUNT_COMPRESSION_PROGRAM_ID = new PublicKey("cmtDvXumGCrqC1Age74
 export const VSR_PROGRAM = anchor.workspace.VoterStakeRegistry as Program<VoterStakeRegistry>;
 export const CIRCUIT_BREAKER_PROGRAM = anchor.workspace.CircuitBreaker as Program<CircuitBreaker>;
 export const BRUSHO_NFT_MANAGER_PROGRAM = anchor.workspace.BrushoNftManager as Program<BrushoNftManager>;
+export const REWARD_DISTRIBUTOR_PROGRAM = anchor.workspace.RewardDistributor as Program<RewardDistributor>;
 
 export const CONNECTION: Connection = anchor.getProvider().connection;
 
@@ -86,6 +88,13 @@ export function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export async function isAccountInitialized(account: PublicKey) {
+  return (await CONNECTION.getAccountInfo(account)) != null;
+}
+
+export async function accountLamports(account: PublicKey) {
+  return (await CONNECTION.getAccountInfo(account)).lamports
+}
 
 // this airdrops sol to an address
 export async function airdropSol(publicKey, amount) {
@@ -343,4 +352,18 @@ export function lockupTimeDurationSeconds(lockupTimeDuration: LockupTimeDuration
   } else {
     return SECS_PER_MONTH.mul(lockupTimeDuration.periods);
   }
+}
+
+export function u32ToBuffer(u32Number: number): Buffer {
+    const buffer = Buffer.alloc(4);
+    buffer.writeInt32BE(u32Number);
+
+    return buffer;
+}
+
+export function u64ToBuffer(u64Number: number): Buffer {
+    const buffer = Buffer.alloc(8);
+    buffer.writeBigInt64BE(BigInt(u64Number));
+
+    return buffer;
 }

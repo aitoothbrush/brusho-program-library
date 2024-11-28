@@ -1,7 +1,7 @@
 use crate::canopy::fill_in_proof_from_canopy;
 use crate::compressed_nfts::{verify_compressed_nft, VerifyCompressedNftArgs};
 use crate::error::RdError;
-use crate::{id, merkle_proof::verify as verify_distribution_tree, state::*};
+use crate::{merkle_proof::verify as verify_distribution_tree, state::*};
 use account_compression_cpi::program::SplAccountCompression;
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::associated_token::AssociatedToken;
@@ -11,7 +11,7 @@ use circuit_breaker::cpi::accounts::TransferV0;
 use circuit_breaker::cpi::transfer_v0;
 use circuit_breaker::{AccountWindowedCircuitBreakerV0, CircuitBreaker, TransferArgsV0};
 
-#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct CompressedNftVerification {
     pub root: [u8; 32],
     pub index: u32,
@@ -20,8 +20,8 @@ pub struct CompressedNftVerification {
     pub proof_size: u32,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, Default)]
-pub struct DistributionTreeVerification {
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
+pub struct DistributionVerification {
     pub index: u32,
     pub data_hash: [u8; 32],
     pub current_period_rewards: u64,
@@ -31,7 +31,7 @@ pub struct DistributionTreeVerification {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct ClaimRewardsArgs {
     pub compressed_nft_args: CompressedNftVerification,
-    pub distribution_tree_args: DistributionTreeVerification,
+    pub distribution_args: DistributionVerification,
 }
 
 #[derive(Accounts)]
@@ -42,17 +42,17 @@ pub struct ClaimRewards<'info> {
 
     #[account(
       has_one = rewards_mint,
+      has_one = vault,
     )]
     pub distributor: Box<Account<'info, Distributor>>,
 
     #[account(
       has_one = distributor,
-      has_one = canopy,
     )]
     pub distribution_tree: Box<Account<'info, DistributionTree>>,
 
-    /// CHECK: Verified by has one
-    pub canopy: UncheckedAccount<'info>,
+    /// CHECK:
+    pub canopy_data: UncheckedAccount<'info>,
 
     #[account(
       init_if_needed,
@@ -69,11 +69,8 @@ pub struct ClaimRewards<'info> {
 
     pub rewards_mint: Box<Account<'info, Mint>>,
 
-    #[account(
-        mut,
-        associated_token::authority = distributor,
-        associated_token::mint = rewards_mint,
-    )]
+    // see distributor constraint
+    #[account(mut)]
     pub vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
@@ -95,7 +92,7 @@ pub struct ClaimRewards<'info> {
     )]
     pub destination_account: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: THe merkle tree
+    /// CHECK: by cpi
     pub merkle_tree: UncheckedAccount<'info>,
     pub compression_program: Program<'info, SplAccountCompression>,
 
@@ -112,16 +109,16 @@ pub fn claim_rewards<'info>(
     let distributor = &ctx.accounts.distributor;
     let distribution_tree = &ctx.accounts.distribution_tree;
     let recipient = &mut ctx.accounts.recipient;
+
     let asset = get_asset_id(
         &ctx.accounts.merkle_tree.key(),
         args.compressed_nft_args.index.into(),
     );
 
     // make sure the distribution tree is active.
-    require_gte!(
-        distributor.current_period,
-        distribution_tree.period,
-        RdError::DistributionTreeIsInactive
+    require!(
+        distributor.current_period >= distribution_tree.period,
+        RdError::DistributionTreeNotActivated
     );
 
     // initialize recipient struct if needed
@@ -134,9 +131,13 @@ pub fn claim_rewards<'info>(
     }
 
     // verify recipient
-    require_eq!(ctx.accounts.distributor.key(), recipient.distributor, RdError::InvalidRecipient);
+    require_eq!(
+        ctx.accounts.distributor.key(),
+        recipient.distributor,
+        RdError::InvalidRecipient
+    );
     require_eq!(recipient.asset, asset, RdError::InvalidAsset);
-    require_gt!(distribution_tree.period, recipient.last_claim_period, RdError::ExpiredPeriod);
+    require_gt!(distribution_tree.period, recipient.last_claim_period, RdError::AlreadyClaimedPeriod);
 
     // Verify the compressed nft to make sure the owner is correct.
     let proof_accounts = ctx.remaining_accounts;
@@ -159,50 +160,41 @@ pub fn claim_rewards<'info>(
         .map(|a| a.key.to_bytes())
         .collect::<Vec<_>>();
 
-    // fill proof only if canopy account is valid
-    if *ctx.accounts.canopy.owner == id() {
+    let oracle_report = distribution_tree.oracle_choice().unwrap();
+    // fill proof only if canopy data is not empty
+    if !ctx.accounts.canopy_data.data_is_empty() {
         fill_in_proof_from_canopy(
-            &ctx.accounts.canopy.try_borrow_data()?[1..],
-            distribution_tree.max_depth,
-            args.distribution_tree_args.index,
+            &ctx.accounts.canopy_data.try_borrow_data()?,
+            oracle_report.max_depth,
+            args.distribution_args.index,
             &mut distribution_tree_proof,
         )?;
     }
 
     let dist_tree_leaf_hash = solana_program::keccak::hashv(&[
         asset.as_ref(),
-        &args.distribution_tree_args.data_hash[..],
-        &args.distribution_tree_args.current_period_rewards.to_be_bytes(),
-        &args.distribution_tree_args.total_rewards.to_be_bytes(),
-    ]).0;
+        &args.distribution_args.data_hash[..],
+        &args.distribution_args.current_period_rewards.to_be_bytes(),
+        &args.distribution_args.total_rewards.to_be_bytes(),
+    ])
+    .0;
+
     if !verify_distribution_tree(
         distribution_tree_proof,
-        distribution_tree.root,
+        oracle_report.root,
         dist_tree_leaf_hash,
-        args.distribution_tree_args.index,
+        args.distribution_args.index,
     ) {
         return Err(error!(RdError::InvalidProof));
     };
 
-    // calculate amount to dist, then transfer funds from vault to destination account.
-    let security_reward_limit = (distribution_tree.period as u64)
-        .checked_sub(recipient.last_claim_period as u64)
-        .unwrap()
-        .checked_mul(distributor.security_rewards_limit)
-        .unwrap();
-
-    let amount_to_dist = args.distribution_tree_args
+    let amount_to_dist = args
+        .distribution_args
         .total_rewards
         .checked_sub(recipient.claimed_rewards)
         .unwrap();
-    require_gte!(security_reward_limit, amount_to_dist, RdError::SecurityControl);
 
-    let distributor_seeds: &[&[&[u8]]] = &[&[
-        b"distributor",
-        distributor.realm.as_ref(),
-        distributor.rewards_mint.as_ref(),
-        &[distributor.bump],
-    ]];
+    let distributor_signer_seeds: &[&[u8]] = distributor_seeds!(distributor);
     transfer_v0(
         CpiContext::new_with_signer(
             ctx.accounts
@@ -216,7 +208,7 @@ pub fn claim_rewards<'info>(
                 circuit_breaker: ctx.accounts.circuit_breaker.to_account_info().clone(),
                 token_program: ctx.accounts.token_program.to_account_info().clone(),
             },
-            distributor_seeds,
+            &[distributor_signer_seeds],
         ),
         TransferArgsV0 {
             amount: amount_to_dist,
@@ -224,7 +216,7 @@ pub fn claim_rewards<'info>(
     )?;
 
     // update recipient
-    recipient.claimed_rewards = args.distribution_tree_args.total_rewards;
+    recipient.claimed_rewards = args.distribution_args.total_rewards;
     recipient.last_claim_period = distribution_tree.period;
 
     Ok(())

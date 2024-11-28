@@ -1,14 +1,13 @@
-use crate::state::*;
+use crate::{error::RdError, state::*, MAX_ORACLES_COUNT};
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct UpdateDistributorArgs {
     pub authority: Option<Pubkey>,
-    pub security_rewards_limit: Option<u64>,
+    pub oracles: Option<Vec<Pubkey>>,
 }
 
 #[derive(Accounts)]
-#[instruction(args: UpdateDistributorArgs)]
 pub struct UpdateDistributor<'info> {
     #[account(
         mut,
@@ -28,8 +27,11 @@ pub fn update_distributor(
     if let Some(authority) = args.authority {
         distributor.authority = authority;
     }
-    if let Some(security_rewards_limit) = args.security_rewards_limit {
-        distributor.security_rewards_limit = security_rewards_limit;
+
+    if let Some(oracles) = args.oracles {
+        require!(oracles.len() <= MAX_ORACLES_COUNT, RdError::OraclesCountExceeds);
+
+        distributor.oracles = oracles;
     }
 
     Ok(())

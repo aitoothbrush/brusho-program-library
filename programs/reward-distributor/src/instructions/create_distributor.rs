@@ -3,15 +3,26 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
-use circuit_breaker::{cpi::{accounts::InitializeAccountWindowedBreakerV0, initialize_account_windowed_breaker_v0}, CircuitBreaker, InitializeAccountWindowedBreakerArgsV0};
+use circuit_breaker::{
+    cpi::{accounts::InitializeAccountWindowedBreakerV0, initialize_account_windowed_breaker_v0},
+    CircuitBreaker, InitializeAccountWindowedBreakerArgsV0,
+};
 use spl_governance::state::realm::get_realm_data;
 
-use crate::{circuit_breaker::WindowedCircuitBreakerConfigV0, error::RdError, state::Distributor};
+use crate::{
+    circuit_breaker::WindowedCircuitBreakerConfigV0,
+    distributor_seeds,
+    error::RdError,
+    state::Distributor,
+};
+
+pub const MAX_ORACLES_COUNT: usize = 5;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct CreateDistributorArgs {
-    pub security_rewards_limit: u64,
+    pub name: String,
     pub authority: Pubkey,
+    pub oracles: Vec<Pubkey>,
     pub circuit_breaker_config: WindowedCircuitBreakerConfigV0,
 }
 
@@ -24,8 +35,8 @@ pub struct CreateDistributor<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + std::mem::size_of::<Distributor>(),
-        seeds = ["distributor".as_bytes(), realm.key().as_ref(), rewards_mint.key().as_ref()],
+        space = 8 + 60 + std::mem::size_of::<Distributor>() + std::mem::size_of::<Pubkey>() * MAX_ORACLES_COUNT, 
+        seeds = ["distributor".as_bytes(), realm.key().as_ref(), rewards_mint.key().as_ref(), args.name.as_bytes()],
         bump,
     )]
     pub distributor: Box<Account<'info, Distributor>>,
@@ -71,7 +82,8 @@ pub fn create_distributor(
     ctx: Context<CreateDistributor>,
     args: CreateDistributorArgs,
 ) -> Result<()> {
-    require!(args.security_rewards_limit > 0, RdError::IllegalPeriodRewardsLimit);
+    require!(args.name.len() <= 32, RdError::InvalidDistributorName);
+    require!(args.oracles.len() <= MAX_ORACLES_COUNT, RdError::OraclesCountExceeds);
 
     // Verify that "realm_authority" is the expected authority on "realm"
     let realm = get_realm_data(
@@ -84,6 +96,19 @@ pub fn create_distributor(
         RdError::InvalidRealmAuthority
     );
 
+    let distributor = Distributor {
+        realm: ctx.accounts.realm.key(),
+        realm_authority: ctx.accounts.realm_authority.key(),
+        rewards_mint: ctx.accounts.rewards_mint.key(),
+        vault: ctx.accounts.vault.key(),
+        name: args.name,
+        authority: args.authority,
+        oracles: args.oracles,
+        current_period: 0,
+        bump: ctx.bumps.distributor,
+    };
+
+    let distributor_signer_seeds: &[&[u8]] = distributor_seeds!(distributor);
     // Initialize circuit breaker
     initialize_account_windowed_breaker_v0(
         CpiContext::new_with_signer(
@@ -96,12 +121,7 @@ pub fn create_distributor(
                 token_program: ctx.accounts.token_program.to_account_info(),
                 system_program: ctx.accounts.system_program.to_account_info(),
             },
-            &[&[
-                "distributor".as_ref(),
-                ctx.accounts.realm.key().as_ref(),
-                ctx.accounts.rewards_mint.key().as_ref(),
-                &[ctx.bumps.distributor],
-            ]],
+            &[distributor_signer_seeds],
         ),
         InitializeAccountWindowedBreakerArgsV0 {
             authority: ctx.accounts.realm_authority.key(),
@@ -110,17 +130,7 @@ pub fn create_distributor(
         },
     )?;
 
-    ctx.accounts.distributor.set_inner(Distributor {
-        realm: ctx.accounts.realm.key(),
-        realm_authority: ctx.accounts.realm_authority.key(),
-        rewards_mint: ctx.accounts.rewards_mint.key(),
-        authority: args.authority,
-        current_period: 0,
-        security_rewards_limit: args.security_rewards_limit,
-        bump: ctx.bumps.distributor,
-        reserved1: [0; 3],
-        reserved2: [0; 12],
-    });
+    ctx.accounts.distributor.set_inner(distributor);
 
     Ok(())
 }

@@ -30,3 +30,4 @@ spl-governance = { workspace = true }
 circuit-breaker = { workspace = true }
 bytemuck = "1.12.3"
 spl-concurrent-merkle-tree = "0.2.0"
+itertools = "0.13.0"
