@@ -23,7 +23,7 @@ pub struct CompressedNftVerification {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct DistributionVerification {
     pub index: u32,
-    pub data_hash: [u8; 32],
+    pub witness_root: [u8; 32],
     pub current_period_rewards: u64,
     pub total_rewards: u64,
 }
@@ -173,7 +173,7 @@ pub fn claim_rewards<'info>(
 
     let dist_tree_leaf_hash = solana_program::keccak::hashv(&[
         asset.as_ref(),
-        &args.distribution_args.data_hash[..],
+        &args.distribution_args.witness_root[..],
         &args.distribution_args.current_period_rewards.to_be_bytes(),
         &args.distribution_args.total_rewards.to_be_bytes(),
     ])
