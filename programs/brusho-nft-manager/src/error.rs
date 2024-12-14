@@ -5,6 +5,8 @@ pub enum BnmError {
     #[msg("")]
     InvalidMakerNameLength,
     #[msg("")]
+    InvalidBrushNoLength,
+    #[msg("")]
     InvaliMetadataUrlLength,
     #[msg("")]
     InvalidRealmAuthority,

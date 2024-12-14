@@ -28,7 +28,7 @@ pub struct InitializeMaker<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + std::mem::size_of::<Maker>() + args.name.len(),
+        space = 8 + std::mem::size_of::<Maker>() + 1 + 17,
         seeds = ["maker".as_bytes(), realm.key().as_ref(), args.name.as_bytes()],
         bump,
     )]
@@ -97,7 +97,7 @@ impl<'info> InitializeMaker<'info> {
 }
 
 pub fn initialize_maker(ctx: Context<InitializeMaker>, args: InitializeMakerArgs) -> Result<()> {
-    require!(args.name.len() <= 32, BnmError::InvalidMakerNameLength);
+    require!(args.name.len() <= 17, BnmError::InvalidMakerNameLength);
     require!(
         args.metadata_url.len() <= 200,
         BnmError::InvaliMetadataUrlLength

@@ -59,7 +59,7 @@ pub struct IssueBrushNft<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + std::mem::size_of::<BrushNoToAsset>() + 1 + args.brush_no.len(),
+        space = 8 + std::mem::size_of::<BrushNoToAsset>() + 1 + 14,
         seeds = [
             "brush_no_to_asset".as_bytes(),
             realm.key().as_ref(),
@@ -122,6 +122,8 @@ impl<'info> IssueBrushNft<'info> {
 }
 
 pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> Result<()> {
+    require!(args.brush_no.len() <= 14, BnmError::InvalidBrushNoLength);
+
     let asset_id = get_asset_id(
         &ctx.accounts.merkle_tree.key(),
         ctx.accounts.tree_authority.num_minted,
@@ -135,7 +137,7 @@ pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> 
     });
 
     let maker = &ctx.accounts.maker;
-    let name = format!("{}# {}", maker.name.clone(), args.brush_no.clone());
+    let name = format!("{}#{}", maker.name.clone(), args.brush_no.clone());
 
     let metadata = MetadataArgs {
         name,
