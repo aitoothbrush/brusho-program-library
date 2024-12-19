@@ -137,7 +137,7 @@ pub fn issue_brush_nft(ctx: Context<IssueBrushNft>, args: IssueBrushNftArgs) -> 
     });
 
     let maker = &ctx.accounts.maker;
-    let name = format!("{}#{}", maker.name.clone(), args.brush_no.clone());
+    let name = format!("BrushO#{}", args.brush_no.clone());
 
     let metadata = MetadataArgs {
         name,
