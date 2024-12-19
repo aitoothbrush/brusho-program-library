@@ -5,6 +5,7 @@ pub mod canopy;
 pub mod circuit_breaker;
 pub mod compressed_nfts;
 pub mod error;
+pub mod events;
 pub mod instructions;
 pub mod merkle_proof;
 pub mod state;

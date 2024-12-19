@@ -1,6 +1,7 @@
 use crate::canopy::fill_in_proof_from_canopy;
 use crate::compressed_nfts::{verify_compressed_nft, VerifyCompressedNftArgs};
 use crate::error::RdError;
+use crate::events::ClaimRewardsEvent;
 use crate::{merkle_proof::verify as verify_distribution_tree, state::*};
 use account_compression_cpi::program::SplAccountCompression;
 use anchor_lang::{prelude::*, solana_program};
@@ -218,6 +219,13 @@ pub fn claim_rewards<'info>(
     // update recipient
     recipient.claimed_rewards = args.distribution_args.total_rewards;
     recipient.last_claim_period = distribution_tree.period;
+
+    emit!(ClaimRewardsEvent {
+        distributor: recipient.distributor,
+        asset: recipient.asset,
+        period: recipient.last_claim_period,
+        amount: amount_to_dist
+    });
 
     Ok(())
 }
