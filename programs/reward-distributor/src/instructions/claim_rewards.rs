@@ -223,6 +223,7 @@ pub fn claim_rewards<'info>(
     emit!(ClaimRewardsEvent {
         distributor: recipient.distributor,
         asset: recipient.asset,
+        owner: ctx.accounts.owner.key(),
         period: recipient.last_claim_period,
         amount: amount_to_dist
     });
