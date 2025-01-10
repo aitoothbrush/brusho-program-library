@@ -100,7 +100,7 @@ pub fn initialize_maker(ctx: Context<InitializeMaker>, args: InitializeMakerArgs
     require!(args.name.len() <= 17, BnmError::InvalidMakerNameLength);
     require!(
         args.metadata_url.len() <= 200,
-        BnmError::InvaliMetadataUrlLength
+        BnmError::InvalidMetadataUrlLength
     );
 
     // Verify that "realm_authority" is the expected authority on "realm"

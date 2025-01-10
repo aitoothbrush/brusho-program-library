@@ -7,7 +7,7 @@ pub enum BnmError {
     #[msg("")]
     InvalidBrushNoLength,
     #[msg("")]
-    InvaliMetadataUrlLength,
+    InvalidMetadataUrlLength,
     #[msg("")]
     InvalidRealmAuthority,
     #[msg("")]
