@@ -4,6 +4,7 @@ use crate::{Lockup, VOTER_DEPOSIT_ENTRY_COUNT};
 
 #[event]
 pub struct NodeDepositEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub amount: u64,
@@ -12,6 +13,7 @@ pub struct NodeDepositEvent {
 
 #[event]
 pub struct NodeReleaseDepositEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub deposit_entry_index: u8,
@@ -21,6 +23,7 @@ pub struct NodeReleaseDepositEvent {
 
 #[event]
 pub struct OrdinaryDepositEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub deposit_entry_index: u8,
@@ -30,6 +33,7 @@ pub struct OrdinaryDepositEvent {
 
 #[event]
 pub struct OrdinaryReleaseDepositEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub deposit_entry_index: u8,
@@ -39,6 +43,7 @@ pub struct OrdinaryReleaseDepositEvent {
 
 #[event]
 pub struct WithdrawEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub deposit_entry_index: u8,
@@ -47,6 +52,7 @@ pub struct WithdrawEvent {
 
 #[event]
 pub struct ClaimRewardEvent {
+    pub registrar: Pubkey,
     // voter authority address
     pub voter: Pubkey,
     pub amount: u64,

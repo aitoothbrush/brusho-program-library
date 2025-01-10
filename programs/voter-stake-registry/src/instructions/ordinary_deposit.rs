@@ -122,6 +122,7 @@ pub fn ordinary_deposit(
     voter.deposit(deposit_entry_index, curr_ts, amount_to_deposit, registrar)?;
 
     emit!(OrdinaryDepositEvent {
+        registrar: ctx.accounts.registrar.key(),
         voter: voter.get_voter_authority(),
         deposit_entry_index,
         amount,

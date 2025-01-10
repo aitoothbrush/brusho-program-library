@@ -125,6 +125,7 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     record.voter_weight_expiry = Some(Clock::get()?.slot);
 
     emit!(WithdrawEvent {
+        registrar: ctx.accounts.registrar.key(),
         voter: voter.get_voter_authority(),
         deposit_entry_index,
         amount,

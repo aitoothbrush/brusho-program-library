@@ -77,6 +77,7 @@ pub fn ordinary_release_deposit(
         voter.deposit(target_deposit_entry_index, curr_ts, amount, registrar)?;
 
         emit!(OrdinaryReleaseDepositEvent {
+        registrar: ctx.accounts.registrar.key(),
             voter: voter.get_voter_authority(),
             deposit_entry_index,
             target_deposit_entry_index,

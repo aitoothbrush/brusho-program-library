@@ -87,6 +87,7 @@ pub fn node_deposit(ctx: Context<NodeDeposit>) -> Result<()> {
     voter.deposit(NODE_DEPOSIT_ENTRY_INDEX, curr_ts, node_security_deposit, registrar)?;
 
     emit!(NodeDepositEvent {
+        registrar: ctx.accounts.registrar.key(),
         voter: voter.get_voter_authority(),
         amount: node_security_deposit,
         lockup: voter.deposit_entry_at(NODE_DEPOSIT_ENTRY_INDEX)?.get_lockup()

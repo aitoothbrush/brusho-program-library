@@ -66,6 +66,7 @@ pub fn node_release_deposit(
         )?;
 
         emit!(NodeReleaseDepositEvent {
+        registrar: ctx.accounts.registrar.key(),
             voter: voter.get_voter_authority(),
             deposit_entry_index: NODE_DEPOSIT_ENTRY_INDEX,
             target_deposit_entry_index,

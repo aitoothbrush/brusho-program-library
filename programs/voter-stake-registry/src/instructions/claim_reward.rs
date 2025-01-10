@@ -87,6 +87,7 @@ pub fn claim_reward(ctx: Context<ClaimReward>, amount: Option<u64>) -> Result<()
     )?;
 
     emit!(ClaimRewardEvent {
+        registrar: ctx.accounts.registrar.key(),
         voter: voter.get_voter_authority(),
         amount: claimed_amount
     });
