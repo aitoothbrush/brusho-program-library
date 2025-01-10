@@ -7,7 +7,7 @@ pub enum RdError {
     #[msg("")]
     InvalidAsset,
     #[msg("")]
-    InvalidProof,
+    InvalidDistributionProof,
     #[msg("")]
     InvalidRecipient,
     #[msg("")]
@@ -23,9 +23,11 @@ pub enum RdError {
     #[msg("")]
     OraclesCountExceeds,
     #[msg("")]
+    InvalidOracleReport,
+    #[msg("")]
     CannotReportAtPresent,
     #[msg("")]
-    InvalidOracleReports,
+    OracleReportsNotAvailable,
     #[msg("")]
     DistributionTreeNotActivated,
 }

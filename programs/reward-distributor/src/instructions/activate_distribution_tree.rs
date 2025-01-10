@@ -23,16 +23,16 @@ pub struct ActivateDistributionTree<'info> {
 
 pub fn activate_distribution_tree(ctx: Context<ActivateDistributionTree>) -> Result<()> {
     let distributor = &mut ctx.accounts.distributor;
-    let distributin_tree = &ctx.accounts.distribution_tree;
+    let distribution_tree = &ctx.accounts.distribution_tree;
 
     require_eq!(
-        distributin_tree.period,
+        distribution_tree.period,
         distributor.current_period + 1,
         RdError::IllegalPeriod
     );
 
-    require!(distributin_tree.oracle_choice().is_some(), RdError::InvalidOracleReports);
+    require!(distribution_tree.oracle_choice().is_some(), RdError::OracleReportsNotAvailable);
 
-    distributor.current_period = distributin_tree.period;
+    distributor.current_period = distribution_tree.period;
     Ok(())
 }

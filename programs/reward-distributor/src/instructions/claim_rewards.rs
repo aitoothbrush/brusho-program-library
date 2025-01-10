@@ -186,7 +186,7 @@ pub fn claim_rewards<'info>(
         dist_tree_leaf_hash,
         args.distribution_args.index,
     ) {
-        return Err(error!(RdError::InvalidProof));
+        return Err(error!(RdError::InvalidDistributionProof));
     };
 
     let amount_to_dist = args

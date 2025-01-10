@@ -29,13 +29,16 @@ pub fn report_oracle(ctx: Context<ReportOracle>, args: ReportOracleArgs) -> Resu
     let distribution_tree = &mut ctx.accounts.distribution_tree;
 
     require!(
+        args.report.root != Pubkey::default().to_bytes() && args.report.max_depth <= 30,
+        RdError::InvalidOracleReport
+    );
+
+    require!(
         distribution_tree.period > distributor.current_period,
         RdError::CannotReportAtPresent
     );
 
     distribution_tree.oracle_reports[args.index as usize] = Option::Some(args.report);
-
-    // TODO: emit events
 
     Ok(())
 }
