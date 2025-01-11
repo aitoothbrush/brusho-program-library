@@ -10,7 +10,7 @@ pub mod instructions;
 pub mod merkle_proof;
 pub mod state;
 
-declare_id!("bteowJth3P2odCH9Xx3kWiAAmXDuxhJb7Fq44TUgHcr");
+declare_id!("bearnU7ZZAaoCyokY882WTFqHhc84rzVfTxnkiMpVCq");
 
 #[program]
 pub mod reward_distributor {
